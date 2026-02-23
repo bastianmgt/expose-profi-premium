@@ -434,9 +434,10 @@ const handleBetaSubmit = async (e) => {
   // GENERATOR FUNCTION
   // ============================================
   
-  const handleGenerateExpose = () => {
+const handleGenerateExpose = () => {
     if (!isFormValid()) return;
     
+    // 1. Die Vorschau wird im Hintergrund erstellt
     setShowPreview(true);
     setAiGeneratedText(`Exklusive ${propertyData.zimmer || '3'}-Zimmer-Wohnung mit ${propertyData.wohnflaeche || '85'} m² Wohnfläche
 
@@ -450,6 +451,9 @@ Energiebedarf: ${propertyData.energiebedarf || '85'} kWh/(m²·a)
 Energieträger: ${propertyData.energietraeger || 'Gas'}
 
 Diese Immobilie bietet Ihnen die perfekte Kombination aus Wohnqualität und Zukunftssicherheit.`);
+
+    // 2. Das Beta-Fenster öffnet sich sofort
+    openBetaModal();
   };
 
   // ============================================
