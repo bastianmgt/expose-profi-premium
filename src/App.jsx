@@ -353,19 +353,30 @@ export default function ExposeProfiLanding() {
     setBetaSubmitted(false);
   };
 
-  const handleBetaSubmit = (e) => {
-    e.preventDefault();
-    if (betaEmail && betaEmail.includes('@')) {
-      // Here you would typically send this to your backend
-      console.log('Beta signup:', betaEmail);
+const handleBetaSubmit = async (e) => {
+  e.preventDefault();
+  if (betaEmail && betaEmail.includes('@')) {
+    // Senden an dein Formspree-Konto
+    const response = await fetch("https://formspree.io/f/xojnpyez", {
+      method: "POST",
+      body: JSON.stringify({ email: betaEmail }),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.ok) {
       setBetaSubmitted(true);
-      
-      // Auto-close after 3 seconds
+      // Modal nach 3 Sekunden automatisch schließen
       setTimeout(() => {
         closeBetaModal();
       }, 3000);
+    } else {
+      alert("Hoppla! Da gab es ein Problem. Bitte versuche es später noch einmal.");
     }
-  };
+  }
+};
 
   // ============================================
   // UPLOAD FUNCTIONS
