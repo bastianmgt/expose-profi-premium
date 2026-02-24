@@ -434,26 +434,35 @@ const handleBetaSubmit = async (e) => {
   // GENERATOR FUNCTION
   // ============================================
   
-const handleGenerateExpose = () => {
+const handleGenerateExpose = async () => {
     if (!isFormValid()) return;
     
-    // 1. Die Vorschau wird im Hintergrund erstellt
+    // Zeige dem Nutzer, dass die KI arbeitet
+    setAiGeneratedText("KI erstellt gerade Ihr Premium-Exposé... Bitte warten.");
     setShowPreview(true);
-    setAiGeneratedText(`Exklusive ${propertyData.zimmer || '3'}-Zimmer-Wohnung mit ${propertyData.wohnflaeche || '85'} m² Wohnfläche
 
-Diese attraktive Immobilie vereint modernen Wohnkomfort mit zeitloser Eleganz. Die großzügig geschnittenen Räume bieten Ihnen vielfältige Gestaltungsmöglichkeiten für Ihr neues Zuhause.
+    try {
+      // Verbindung zum neuen KI-Tunnel (api/generate.js)
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ propertyData }),
+      });
 
-AUSSTATTUNG & BESONDERHEITEN:
-${propertyData.aussenbereich.length > 0 ? `✓ ${propertyData.aussenbereich.join(', ')}\n` : ''}${propertyData.innenraum.length > 0 ? `✓ ${propertyData.innenraum.join(', ')}\n` : ''}${propertyData.parkenKeller.length > 0 ? `✓ ${propertyData.parkenKeller.join(', ')}\n` : ''}${propertyData.technikKomfort.length > 0 ? `✓ ${propertyData.technikKomfort.join(', ')}\n` : ''}
-ENERGETISCHE DATEN:
-Energieeffizienzklasse: ${propertyData.effizienzklasse || 'C'}
-Energiebedarf: ${propertyData.energiebedarf || '85'} kWh/(m²·a)
-Energieträger: ${propertyData.energietraeger || 'Gas'}
+      if (!response.ok) throw new Error('KI-Antwort fehlgeschlagen');
 
-Diese Immobilie bietet Ihnen die perfekte Kombination aus Wohnqualität und Zukunftssicherheit.`);
+      const data = await response.json();
+      
+      // Den echten Text der KI anzeigen
+      setAiGeneratedText(data.text);
+      
+      // Nach 2 Sekunden das Beta-Fenster für die Lead-Erfassung öffnen
+      setTimeout(() => openBetaModal(), 2000);
 
-    // 2. Das Beta-Fenster öffnet sich sofort
-    openBetaModal();
+    } catch (error) {
+      console.error("Fehler:", error);
+      setAiGeneratedText("Entschuldigung, es gab ein Problem mit der KI-Verbindung. Bitte versuchen Sie es gleich noch einmal.");
+    }
   };
 
   // ============================================
