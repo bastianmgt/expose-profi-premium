@@ -356,7 +356,6 @@ export default function ExposeProfiLanding() {
 const handleBetaSubmit = async (e) => {
   e.preventDefault();
   if (betaEmail && betaEmail.includes('@')) {
-    // Senden an dein Formspree-Konto
     const response = await fetch("https://formspree.io/f/xojnpyez", {
       method: "POST",
       body: JSON.stringify({ email: betaEmail }),
@@ -368,7 +367,6 @@ const handleBetaSubmit = async (e) => {
 
     if (response.ok) {
       setBetaSubmitted(true);
-      // Modal nach 3 Sekunden automatisch schließen
       setTimeout(() => {
         closeBetaModal();
       }, 3000);
@@ -431,37 +429,72 @@ const handleBetaSubmit = async (e) => {
   };
 
   // ============================================
-  // GENERATOR FUNCTION
+  // UPDATED GENERATOR FUNCTION
   // ============================================
   
-const handleGenerateExpose = async () => {
-    if (!isFormValid()) return;
+  const handleGenerateExpose = async () => {
+    // Validierung
+    if (!isFormValid()) {
+      return;
+    }
+
+    // UI-State: Ladezustand aktivieren
+    setShowPreview(false);
+    setAiGeneratedText('');
     
-    // Zeige dem Nutzer, dass die KI arbeitet
-    setAiGeneratedText("KI erstellt gerade Ihr Premium-Exposé... Bitte warten.");
+    const loadingText = '⏳ KI generiert Ihr Exposé...\n\nBitte warten Sie einen Moment.';
+    setAiGeneratedText(loadingText);
     setShowPreview(true);
 
     try {
-      // Verbindung zum neuen KI-Tunnel (api/generate.js)
+      console.log('📤 Sende Request an /api/generate...');
+      
+      // API-Request an den Vercel-Tunnel
       const response = await fetch('/api/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ propertyData }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          propertyData: propertyData
+        })
       });
 
-      if (!response.ok) throw new Error('KI-Antwort fehlgeschlagen');
-
       const data = await response.json();
-      
-      // Den echten Text der KI anzeigen
+
+      // Detaillierte Fehlerbehandlung für Feedback an den Nutzer
+      if (!response.ok) {
+        console.error('❌ API-Fehler:', data);
+        
+        let errorMessage = 'Entschuldigung, es gab ein Problem bei der Generierung.';
+        
+        if (response.status === 402) {
+          errorMessage = '⚠️ API-Guthaben aufgebraucht\n\nBitte laden Sie Ihr OpenAI-Konto auf.';
+        } else if (response.status === 401) {
+          errorMessage = '🔑 API-Key Problem\n\nBitte prüfen Sie den OpenAI API-Key in Vercel.';
+        } else if (response.status === 429) {
+          errorMessage = '⏱️ Zu viele Anfragen\n\nBitte kurz warten und erneut versuchen.';
+        } else if (data.message) {
+          errorMessage = `❌ Fehler: ${data.message}`;
+        }
+        
+        setAiGeneratedText(errorMessage);
+        return;
+      }
+
+      // Erfolg: Text der KI setzen
+      console.log('✅ Exposé erfolgreich generiert');
       setAiGeneratedText(data.text);
-      
-      // Nach 2 Sekunden das Beta-Fenster für die Lead-Erfassung öffnen
-      setTimeout(() => openBetaModal(), 2000);
+
+      // Nach 2 Sekunden: Beta-Modal öffnen
+      setTimeout(() => {
+        openBetaModal();
+      }, 2000);
 
     } catch (error) {
-      console.error("Fehler:", error);
-      setAiGeneratedText("Entschuldigung, es gab ein Problem mit der KI-Verbindung. Bitte versuchen Sie es gleich noch einmal.");
+      console.error('❌ Netzwerk-Fehler:', error);
+      const errorMessage = `🌐 Verbindungsfehler\n\nKeine Verbindung zur KI möglich.\n\nDetails: ${error.message}`;
+      setAiGeneratedText(errorMessage);
     }
   };
 
@@ -488,10 +521,7 @@ const handleGenerateExpose = async () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
       
-      {/* ============================================ */}
       {/* HEADER */}
-      {/* ============================================ */}
-      
       <header className="bg-[#0A192F] shadow-xl sticky top-0 z-50 border-b border-[#C5A059]/20">
         <div className="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
           <div className="flex items-center space-x-3">
@@ -529,10 +559,7 @@ const handleGenerateExpose = async () => {
         </div>
       </header>
 
-      {/* ============================================ */}
       {/* HERO SECTION */}
-      {/* ============================================ */}
-      
       <section className="py-24 md:py-32 bg-gradient-to-b from-[#0A192F] to-[#112240] text-white relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-0 w-96 h-96 bg-[#C5A059] rounded-full filter blur-3xl"></div>
@@ -569,10 +596,7 @@ const handleGenerateExpose = async () => {
         </div>
       </section>
 
-      {/* ============================================ */}
       {/* 3-STEP PROCESS */}
-      {/* ============================================ */}
-      
       <section className="py-20 bg-white">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
@@ -631,10 +655,7 @@ const handleGenerateExpose = async () => {
         </div>
       </section>
 
-      {/* ============================================ */}
       {/* GENERATOR SECTION */}
-      {/* ============================================ */}
-      
       <section id="generator" className="py-20 bg-gradient-to-b from-slate-50 to-white">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-12">
@@ -647,7 +668,6 @@ const handleGenerateExpose = async () => {
           <div className="grid lg:grid-cols-2 gap-10">
             {/* Left Column - Upload */}
             <div className="space-y-6">
-              {/* Logo Upload */}
               <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
                 <div className="flex items-center space-x-2 mb-4">
                   <Palette className="w-5 h-5 text-[#C5A059]" />
@@ -678,7 +698,6 @@ const handleGenerateExpose = async () => {
                 </div>
               </div>
 
-              {/* Photo Upload */}
               <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
                 <h3 className="text-lg font-bold text-[#0A192F] mb-4">Objektfotos</h3>
                 <div className="border-2 border-dashed border-[#C5A059]/50 rounded-xl p-6 hover:border-[#C5A059] transition-colors cursor-pointer">
@@ -728,7 +747,6 @@ const handleGenerateExpose = async () => {
                 )}
               </div>
 
-              {/* Floor Plans */}
               <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
                 <h3 className="text-lg font-bold text-[#0A192F] mb-4">Grundrisse</h3>
                 <div className="border-2 border-dashed border-[#C5A059]/50 rounded-xl p-6 hover:border-[#C5A059] transition-colors cursor-pointer">
@@ -772,7 +790,6 @@ const handleGenerateExpose = async () => {
               <h3 className="text-lg font-bold text-[#0A192F] mb-6">Objektdaten</h3>
               
               <div className="space-y-5">
-                {/* Basic Data with Validation */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-semibold text-[#0A192F] mb-2">
@@ -821,7 +838,6 @@ const handleGenerateExpose = async () => {
 
                 <div className="border-t border-gray-200 pt-5"></div>
 
-                {/* Compact Features */}
                 <div>
                   <label className="block text-sm font-semibold text-[#0A192F] mb-3">
                     Ausstattung
@@ -846,7 +862,6 @@ const handleGenerateExpose = async () => {
 
                 <div className="border-t border-gray-200 pt-5"></div>
 
-                {/* Energy Certificate */}
                 <div>
                   <label className="block text-sm font-semibold text-[#0A192F] mb-3">
                     Energieausweis (GEG-Pflicht)
@@ -919,7 +934,6 @@ const handleGenerateExpose = async () => {
                   </div>
                 </div>
 
-                {/* Generate Button with Validation */}
                 <button 
                   onClick={handleGenerateExpose}
                   disabled={!isFormValid()}
@@ -977,10 +991,7 @@ const handleGenerateExpose = async () => {
         </div>
       </section>
 
-      {/* ============================================ */}
       {/* BENEFITS SECTION */}
-      {/* ============================================ */}
-      
       <section id="vorteile" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
@@ -1024,10 +1035,7 @@ const handleGenerateExpose = async () => {
         </div>
       </section>
 
-      {/* ============================================ */}
-      {/* PRICING SECTION (BETA) */}
-      {/* ============================================ */}
-      
+      {/* PRICING SECTION */}
       <section id="preise" className="py-20 bg-gradient-to-b from-slate-50 to-white">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
@@ -1038,7 +1046,6 @@ const handleGenerateExpose = async () => {
           </div>
           
           <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-            {/* Starter Package */}
             <div className="bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-[#C5A059] transition-all hover:shadow-xl">
               <div className="text-center mb-6">
                 <h3 className="text-2xl font-bold text-[#0A192F] mb-2">Starter</h3>
@@ -1080,7 +1087,6 @@ const handleGenerateExpose = async () => {
               </button>
             </div>
 
-            {/* Pro Package - Highlighted */}
             <div className="bg-gradient-to-br from-[#0A192F] to-[#112240] rounded-2xl p-8 border-2 border-[#C5A059] relative overflow-hidden shadow-2xl">
               <div className="absolute top-4 right-4 bg-[#C5A059] text-white px-4 py-1 rounded-full text-sm font-bold">
                 BELIEBT
@@ -1133,10 +1139,7 @@ const handleGenerateExpose = async () => {
         </div>
       </section>
 
-      {/* ============================================ */}
       {/* FOOTER */}
-      {/* ============================================ */}
-      
       <footer id="kontakt" className="bg-[#0A192F] text-white py-16">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid md:grid-cols-4 gap-8 mb-12">
@@ -1151,17 +1154,6 @@ const handleGenerateExpose = async () => {
                 Die führende KI-Lösung für professionelle Immobilien-Exposés. 
                 Entwickelt von Maklern für Makler.
               </p>
-              <div className="flex space-x-4">
-                <button className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-lg flex items-center justify-center transition-all">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                </button>
-                <button className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-lg flex items-center justify-center transition-all">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/></svg>
-                </button>
-                <button className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-lg flex items-center justify-center transition-all">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-                </button>
-              </div>
             </div>
 
             <div>
@@ -1176,38 +1168,10 @@ const handleGenerateExpose = async () => {
             <div>
               <h4 className="text-sm font-bold text-white mb-4 uppercase tracking-wider">Rechtliches</h4>
               <ul className="space-y-3">
-                <li>
-                  <button 
-                    onClick={() => openLegalModal('impressum')}
-                    className="text-gray-400 hover:text-[#C5A059] transition-colors text-left"
-                  >
-                    Impressum
-                  </button>
-                </li>
-                <li>
-                  <button 
-                    onClick={() => openLegalModal('datenschutz')}
-                    className="text-gray-400 hover:text-[#C5A059] transition-colors text-left"
-                  >
-                    Datenschutz
-                  </button>
-                </li>
-                <li>
-                  <button 
-                    onClick={() => openLegalModal('agb')}
-                    className="text-gray-400 hover:text-[#C5A059] transition-colors text-left"
-                  >
-                    AGB
-                  </button>
-                </li>
-                <li>
-                  <button 
-                    onClick={() => openLegalModal('widerruf')}
-                    className="text-gray-400 hover:text-[#C5A059] transition-colors text-left"
-                  >
-                    Widerruf
-                  </button>
-                </li>
+                <li><button onClick={() => openLegalModal('impressum')} className="text-gray-400 hover:text-[#C5A059] transition-colors text-left">Impressum</button></li>
+                <li><button onClick={() => openLegalModal('datenschutz')} className="text-gray-400 hover:text-[#C5A059] transition-colors text-left">Datenschutz</button></li>
+                <li><button onClick={() => openLegalModal('agb')} className="text-gray-400 hover:text-[#C5A059] transition-colors text-left">AGB</button></li>
+                <li><button onClick={() => openLegalModal('widerruf')} className="text-gray-400 hover:text-[#C5A059] transition-colors text-left">Widerruf</button></li>
               </ul>
             </div>
           </div>
@@ -1225,119 +1189,56 @@ const handleGenerateExpose = async () => {
         </div>
       </footer>
 
-      {/* ============================================ */}
       {/* MODALS */}
-      {/* ============================================ */}
-
-      {/* Legal Modal */}
       {legalContent && (
-        <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto"
-          onClick={closeLegalModal}
-        >
-          <div 
-            className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full my-8 relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto" onClick={closeLegalModal}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full my-8 relative" onClick={(e) => e.stopPropagation()}>
             <div className="sticky top-0 bg-white border-b border-gray-200 px-8 py-6 rounded-t-2xl flex items-center justify-between z-10">
-              <h2 className="text-3xl font-bold text-[#0A192F]">
-                {legalTexts[legalContent].title}
-              </h2>
-              <button
-                onClick={closeLegalModal}
-                className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
-                aria-label="Schließen"
-              >
+              <h2 className="text-3xl font-bold text-[#0A192F]">{legalTexts[legalContent].title}</h2>
+              <button onClick={closeLegalModal} className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors">
                 <X className="w-6 h-6 text-gray-600" />
               </button>
             </div>
-            
-            {/* Modal Content */}
             <div className="px-8 py-6 max-h-[70vh] overflow-y-auto">
               <div className="prose prose-slate max-w-none text-gray-700 leading-relaxed">
                 {legalTexts[legalContent].sections.map((section, index) => (
                   <div key={index} className="mb-6">
                     <h3 className="text-xl font-bold text-[#0A192F] mb-4">{section.heading}</h3>
                     <div className="text-gray-700">
-                      {typeof section.content === 'string' ? (
-                        <p className="mb-4">{section.content}</p>
-                      ) : (
-                        section.content
-                      )}
+                      {typeof section.content === 'string' ? <p className="mb-4">{section.content}</p> : section.content}
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-            
-            {/* Modal Footer */}
             <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-8 py-4 rounded-b-2xl">
-              <button
-                onClick={closeLegalModal}
-                className="w-full bg-[#0A192F] hover:bg-[#0A192F]/90 text-white py-3 rounded-lg font-semibold transition-all"
-              >
-                Schließen
-              </button>
+              <button onClick={closeLegalModal} className="w-full bg-[#0A192F] hover:bg-[#0A192F]/90 text-white py-3 rounded-lg font-semibold transition-all">Schließen</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Beta Waitlist Modal */}
       {showBetaModal && (
-        <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onClick={closeBetaModal}
-        >
-          <div 
-            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={closeBetaModal}
-              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
-              aria-label="Schließen"
-            >
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={closeBetaModal}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 relative" onClick={(e) => e.stopPropagation()}>
+            <button onClick={closeBetaModal} className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors">
               <X className="w-5 h-5 text-gray-600" />
             </button>
-
             {!betaSubmitted ? (
               <>
                 <div className="text-center mb-6">
                   <div className="w-16 h-16 bg-gradient-to-br from-[#C5A059] to-[#A68B4A] rounded-full flex items-center justify-center mx-auto mb-4">
                     <Sparkles className="w-8 h-8 text-white" />
                   </div>
-                  <h3 className="text-2xl font-bold text-[#0A192F] mb-2">
-                    Beta-Zugang anfordern
-                  </h3>
-                  <p className="text-gray-600">
-                    Vielen Dank für Ihr Interesse! Wir befinden uns aktuell in einer exklusiven Beta-Phase. 
-                    Hinterlassen Sie Ihre E-Mail-Adresse, und wir benachrichtigen Sie, sobald Ihr Zugang bereit ist.
-                  </p>
+                  <h3 className="text-2xl font-bold text-[#0A192F] mb-2">Beta-Zugang anfordern</h3>
+                  <p className="text-gray-600">Wir benachrichtigen Sie, sobald Ihr Zugang bereit ist.</p>
                 </div>
-
                 <form onSubmit={handleBetaSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-semibold text-[#0A192F] mb-2">
-                      E-Mail-Adresse *
-                    </label>
-                    <input
-                      type="email"
-                      value={betaEmail}
-                      onChange={(e) => setBetaEmail(e.target.value)}
-                      placeholder="ihre.email@beispiel.de"
-                      required
-                      className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#C5A059] focus:ring-2 focus:ring-[#C5A059]/20 outline-none transition-all"
-                    />
+                    <label className="block text-sm font-semibold text-[#0A192F] mb-2">E-Mail-Adresse *</label>
+                    <input type="email" value={betaEmail} onChange={(e) => setBetaEmail(e.target.value)} placeholder="ihre.email@beispiel.de" required className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#C5A059] focus:ring-2 focus:ring-[#C5A059]/20 outline-none transition-all" />
                   </div>
-
-                  <button
-                    type="submit"
-                    className="w-full bg-gradient-to-r from-[#C5A059] to-[#A68B4A] hover:from-[#B39050] hover:to-[#957A3F] text-white py-3 rounded-lg font-semibold transition-all transform hover:scale-105 shadow-lg"
-                  >
-                    Beta-Zugang sichern
-                  </button>
+                  <button type="submit" className="w-full bg-gradient-to-r from-[#C5A059] to-[#A68B4A] hover:from-[#B39050] hover:to-[#957A3F] text-white py-3 rounded-lg font-semibold transition-all transform hover:scale-105 shadow-lg">Beta-Zugang sichern</button>
                 </form>
               </>
             ) : (
@@ -1345,13 +1246,8 @@ const handleGenerateExpose = async () => {
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Check className="w-8 h-8 text-green-600" />
                 </div>
-                <h3 className="text-2xl font-bold text-[#0A192F] mb-2">
-                  Vielen Dank!
-                </h3>
-                <p className="text-gray-600">
-                  Wir haben Ihre E-Mail-Adresse erhalten und werden Sie benachrichtigen, 
-                  sobald Ihr Beta-Zugang freigeschaltet ist.
-                </p>
+                <h3 className="text-2xl font-bold text-[#0A192F] mb-2">Vielen Dank!</h3>
+                <p className="text-gray-600">Wir melden uns in Kürze bei Ihnen.</p>
               </div>
             )}
           </div>
