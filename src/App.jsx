@@ -8,7 +8,6 @@ import {
   FileText, 
   Image, 
   FileInput, 
-  Home, 
   X, 
   Check,
   Edit3,
@@ -18,27 +17,18 @@ import {
 } from 'lucide-react';
 
 export default function ExposeProfiLanding() {
-  // ============================================
   // STATE MANAGEMENT
-  // ============================================
-  
-  // Upload states
   const [energyUploadStatus, setEnergyUploadStatus] = useState('idle');
   const [uploadedPhotos, setUploadedPhotos] = useState([]);
   const [uploadedFloorPlans, setUploadedFloorPlans] = useState([]);
   const [uploadedLogo, setUploadedLogo] = useState(null);
-  
-  // Generator states
   const [showPreview, setShowPreview] = useState(false);
   const [aiGeneratedText, setAiGeneratedText] = useState('');
-  
-  // Modal states
   const [legalContent, setLegalContent] = useState(null);
   const [showBetaModal, setShowBetaModal] = useState(false);
   const [betaEmail, setBetaEmail] = useState('');
   const [betaSubmitted, setBetaSubmitted] = useState(false);
   
-  // Form data
   const [propertyData, setPropertyData] = useState({
     wohnflaeche: '',
     zimmer: '',
@@ -54,10 +44,6 @@ export default function ExposeProfiLanding() {
     effizienzklasse: ''
   });
 
-  // ============================================
-  // FEATURE CATEGORIES
-  // ============================================
-  
   const featureCategories = {
     aussenbereich: ['Balkon', 'Terrasse', 'Garten', 'Dachterrasse', 'Loggia'],
     innenraum: ['Einbauküche', 'Gäste-WC', 'Kamin', 'Fußbodenheizung', 'Abstellraum'],
@@ -65,10 +51,6 @@ export default function ExposeProfiLanding() {
     technikKomfort: ['Aufzug', 'Barrierefrei', 'Smart Home', 'Klimaanlage']
   };
 
-  // ============================================
-  // LEGAL CONTENT STRUCTURE
-  // ============================================
-  
   const legalTexts = {
     impressum: {
       title: 'Impressum',
@@ -91,21 +73,6 @@ export default function ExposeProfiLanding() {
         {
           heading: 'Umsatzsteuer-ID',
           content: 'Kleinunternehmer gemäß § 19 UStG. Es wird keine Umsatzsteuer ausgewiesen.'
-        },
-        {
-          heading: 'Haftungsausschluss',
-          content: (
-            <>
-              <p className="mb-4">
-                <strong>Haftung für Inhalte:</strong><br/>
-                Die Inhalte unserer Seiten wurden mit größter Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte können wir jedoch keine Gewähr übernehmen.
-              </p>
-              <p>
-                <strong>Haftung für Links:</strong><br/>
-                Unser Angebot enthält Links zu externen Webseiten Dritter, auf deren Inhalte wir keinen Einfluss haben. Deshalb können wir für diese fremden Inhalte auch keine Gewähr übernehmen.
-              </p>
-            </>
-          )
         }
       ]
     },
@@ -126,41 +93,8 @@ export default function ExposeProfiLanding() {
                 Covina, CA 91723<br/>
                 USA
               </p>
-              <p>
-                Vercel verarbeitet technische Logfiles (IP-Adressen, Browsertyp, Zugriffszeiten) zur Bereitstellung und Sicherheit der Website. Die Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse).
-              </p>
             </>
           )
-        },
-        {
-          heading: '3. Datenerfassung auf dieser Website',
-          content: (
-            <>
-              <p className="mb-4">
-                <strong>Server-Log-Dateien:</strong><br/>
-                Der Provider der Seiten erhebt und speichert automatisch Informationen in Server-Log-Dateien, die Ihr Browser automatisch übermittelt. Dies sind:
-              </p>
-              <ul className="list-disc list-inside mb-4 space-y-1">
-                <li>Browsertyp und Browserversion</li>
-                <li>Verwendetes Betriebssystem</li>
-                <li>Referrer URL</li>
-                <li>Hostname des zugreifenden Rechners</li>
-                <li>Uhrzeit der Serveranfrage</li>
-                <li>IP-Adresse</li>
-              </ul>
-              <p>
-                Eine Zusammenführung dieser Daten mit anderen Datenquellen wird nicht vorgenommen. Die Erfassung erfolgt auf Grundlage von Art. 6 Abs. 1 lit. f DSGVO.
-              </p>
-            </>
-          )
-        },
-        {
-          heading: '4. Kontaktaufnahme',
-          content: 'Bei Kontaktaufnahme per E-Mail werden Ihre Angaben zur Bearbeitung der Anfrage und für den Fall von Anschlussfragen gespeichert. Diese Daten werden nicht ohne Ihre Einwilligung weitergegeben.'
-        },
-        {
-          heading: '5. Ihre Rechte',
-          content: 'Sie haben das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Widerspruch und Datenübertragbarkeit. Wenden Sie sich dazu an: info@expose-profi.de'
         }
       ]
     },
@@ -169,43 +103,7 @@ export default function ExposeProfiLanding() {
       sections: [
         {
           heading: 'Widerrufsrecht',
-          content: (
-            <>
-              <p className="mb-4">
-                Sie haben das Recht, binnen vierzehn Tagen ohne Angabe von Gründen diesen Vertrag zu widerrufen.
-              </p>
-              <p className="mb-4">
-                Die Widerrufsfrist beträgt vierzehn Tage ab dem Tag des Vertragsabschlusses.
-              </p>
-              <p className="mb-4">
-                Um Ihr Widerrufsrecht auszuüben, müssen Sie uns<br/>
-                <strong>Bastian Marget</strong><br/>
-                Werderstraße 16a<br/>
-                79379 Müllheim<br/>
-                E-Mail: info@expose-profi.de
-              </p>
-              <p>
-                mittels einer eindeutigen Erklärung (z. B. ein mit der Post versandter Brief oder E-Mail) über Ihren Entschluss, diesen Vertrag zu widerrufen, informieren.
-              </p>
-            </>
-          )
-        },
-        {
-          heading: 'Folgen des Widerrufs',
-          content: 'Wenn Sie diesen Vertrag widerrufen, haben wir Ihnen alle Zahlungen, die wir von Ihnen erhalten haben, unverzüglich und spätestens binnen vierzehn Tagen ab dem Tag zurückzuzahlen, an dem die Mitteilung über Ihren Widerruf dieses Vertrags bei uns eingegangen ist.'
-        },
-        {
-          heading: 'Erlöschen des Widerrufsrechts',
-          content: (
-            <>
-              <p className="mb-4">
-                Das Widerrufsrecht erlischt bei einem Vertrag zur Erbringung von Dienstleistungen, wenn der Unternehmer die Dienstleistung vollständig erbracht hat und mit der Ausführung der Dienstleistung erst begonnen hat, nachdem der Verbraucher dazu seine ausdrückliche Zustimmung gegeben hat und gleichzeitig seine Kenntnis davon bestätigt hat, dass er sein Widerrufsrecht bei vollständiger Vertragserfüllung durch den Unternehmer verliert.
-              </p>
-              <p>
-                <strong>Wichtig:</strong> Bei der sofortigen Nutzung digitaler Dienstleistungen (z.B. Exposé-Generierung) erlischt das Widerrufsrecht mit Beginn der Leistungserbringung, wenn Sie dem ausdrücklich zugestimmt haben.
-              </p>
-            </>
-          )
+          content: 'Sie haben das Recht, binnen vierzehn Tagen ohne Angabe von Gründen diesen Vertrag zu widerrufen.'
         }
       ]
     },
@@ -214,87 +112,12 @@ export default function ExposeProfiLanding() {
       sections: [
         {
           heading: '§ 1 Geltungsbereich',
-          content: 'Diese Allgemeinen Geschäftsbedingungen (AGB) gelten für alle Verträge über die Erstellung von Immobilien-Exposés mittels KI-gestützter Software zwischen Bastian Marget (nachfolgend "Anbieter") und dem Kunden.'
-        },
-        {
-          heading: '§ 2 Vertragsgegenstand',
-          content: 'Der Anbieter stellt eine Software-Lösung zur Verfügung, die es Immobilienmaklern ermöglicht, professionelle Exposés zu erstellen. Die Erstellung erfolgt durch künstliche Intelligenz auf Basis der vom Kunden hochgeladenen Daten.'
-        },
-        {
-          heading: '§ 3 Leistungsumfang',
-          content: (
-            <>
-              <p className="mb-4">
-                <strong>Starter-Paket (29€ pro Exposé):</strong>
-              </p>
-              <ul className="list-disc list-inside mb-4 space-y-1">
-                <li>1 professionelles Exposé</li>
-                <li>KI-generierte Texte</li>
-                <li>GEG-konforme Pflichtangaben</li>
-                <li>PDF-Export in Standarddesign</li>
-              </ul>
-              <p className="mb-4">
-                <strong>Pro-Abo (79€ pro Monat):</strong>
-              </p>
-              <ul className="list-disc list-inside space-y-1">
-                <li>Unbegrenzte Exposés</li>
-                <li>Premium KI-Texte</li>
-                <li>Eigenes Logo und Branding (White-Label)</li>
-                <li>Prioritäts-Support</li>
-              </ul>
-            </>
-          )
-        },
-        {
-          heading: '§ 4 Preise und Zahlung',
-          content: (
-            <>
-              <p className="mb-4">
-                Die aktuellen Preise sind auf der Website ersichtlich. Die Zahlung erfolgt per Rechnung und ist innerhalb von 7 Tagen nach Rechnungsdatum fällig.
-              </p>
-              <p>
-                Das Pro-Abo verlängert sich automatisch um jeweils einen weiteren Monat, sofern es nicht mit einer Frist von 14 Tagen zum Monatsende gekündigt wird.
-              </p>
-            </>
-          )
-        },
-        {
-          heading: '§ 5 Pflichten des Kunden',
-          content: 'Der Kunde ist verpflichtet, korrekte und vollständige Daten hochzuladen. Der Kunde ist für die rechtliche Prüfung der generierten Exposés selbst verantwortlich, insbesondere für die Einhaltung der GEG-Pflichtangaben.'
-        },
-        {
-          heading: '§ 6 Haftung',
-          content: 'Der Anbieter haftet nur bei Vorsatz und grober Fahrlässigkeit. Die Haftung für die Richtigkeit der KI-generierten Inhalte ist ausgeschlossen. Der Kunde muss alle Exposés vor Veröffentlichung selbst auf Vollständigkeit und Korrektheit prüfen.'
-        },
-        {
-          heading: '§ 7 Urheberrecht',
-          content: 'Die vom Kunden erstellten Exposés dürfen frei verwendet werden. Der Anbieter behält sich das Recht vor, anonymisierte Beispiele für Marketingzwecke zu nutzen.'
-        },
-        {
-          heading: '§ 8 Datenschutz',
-          content: 'Es gelten die Bestimmungen unserer Datenschutzerklärung.'
-        },
-        {
-          heading: '§ 9 Schlussbestimmungen',
-          content: (
-            <>
-              <p className="mb-4">
-                Es gilt das Recht der Bundesrepublik Deutschland. Sollten einzelne Bestimmungen dieser AGB unwirksam sein, bleibt die Wirksamkeit der übrigen Bestimmungen unberührt.
-              </p>
-              <p>
-                <strong>Stand:</strong> Februar 2025
-              </p>
-            </>
-          )
+          content: 'Diese Allgemeinen Geschäftsbedingungen gelten für alle Verträge über die Erstellung von Immobilien-Exposés.'
         }
       ]
     }
   };
 
-  // ============================================
-  // VALIDATION & UTILITY FUNCTIONS
-  // ============================================
-  
   const isFormValid = () => {
     return propertyData.wohnflaeche.trim() !== '' && propertyData.zimmer.trim() !== '';
   };
@@ -329,10 +152,6 @@ export default function ExposeProfiLanding() {
     }));
   };
 
-  // ============================================
-  // MODAL FUNCTIONS
-  // ============================================
-  
   const openLegalModal = (type) => {
     setLegalContent(type);
   };
@@ -353,33 +172,17 @@ export default function ExposeProfiLanding() {
     setBetaSubmitted(false);
   };
 
-const handleBetaSubmit = async (e) => {
-  e.preventDefault();
-  if (betaEmail && betaEmail.includes('@')) {
-    const response = await fetch("https://formspree.io/f/xojnpyez", {
-      method: "POST",
-      body: JSON.stringify({ email: betaEmail }),
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (response.ok) {
+  const handleBetaSubmit = (e) => {
+    e.preventDefault();
+    if (betaEmail && betaEmail.includes('@')) {
+      console.log('Beta signup:', betaEmail);
       setBetaSubmitted(true);
       setTimeout(() => {
         closeBetaModal();
       }, 3000);
-    } else {
-      alert("Hoppla! Da gab es ein Problem. Bitte versuche es später noch einmal.");
     }
-  }
-};
+  };
 
-  // ============================================
-  // UPLOAD FUNCTIONS
-  // ============================================
-  
   const handleEnergyUpload = () => {
     setEnergyUploadStatus('uploading');
     setTimeout(() => {
@@ -428,28 +231,19 @@ const handleBetaSubmit = async (e) => {
     setUploadedFloorPlans(prev => prev.filter(p => p.id !== id));
   };
 
-  // ============================================
-  // UPDATED GENERATOR FUNCTION
-  // ============================================
-  
+  // FIXED FUNCTION - handleGenerateExpose
   const handleGenerateExpose = async () => {
-    // Validierung
     if (!isFormValid()) {
       return;
     }
 
-    // UI-State: Ladezustand aktivieren
     setShowPreview(false);
-    setAiGeneratedText('');
-    
-    const loadingText = '⏳ KI generiert Ihr Exposé...\n\nBitte warten Sie einen Moment.';
-    setAiGeneratedText(loadingText);
+    setAiGeneratedText('⏳ KI generiert Ihr Exposé...\n\nBitte warten Sie einen Moment.');
     setShowPreview(true);
 
     try {
-      console.log('📤 Sende Request an /api/generate...');
+      console.log('📤 Sende Request...');
       
-      // API-Request an den Vercel-Tunnel
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: {
@@ -460,48 +254,44 @@ const handleBetaSubmit = async (e) => {
         })
       });
 
-      const data = await response.json();
+      console.log('📥 Response Status:', response.status);
+      
+      const contentType = response.headers.get('content-type');
+      console.log('📋 Content-Type:', contentType);
 
-      // Detaillierte Fehlerbehandlung für Feedback an den Nutzer
-      if (!response.ok) {
-        console.error('❌ API-Fehler:', data);
-        
-        let errorMessage = 'Entschuldigung, es gab ein Problem bei der Generierung.';
-        
-        if (response.status === 402) {
-          errorMessage = '⚠️ API-Guthaben aufgebraucht\n\nBitte laden Sie Ihr OpenAI-Konto auf.';
-        } else if (response.status === 401) {
-          errorMessage = '🔑 API-Key Problem\n\nBitte prüfen Sie den OpenAI API-Key in Vercel.';
-        } else if (response.status === 429) {
-          errorMessage = '⏱️ Zu viele Anfragen\n\nBitte kurz warten und erneut versuchen.';
-        } else if (data.message) {
-          errorMessage = `❌ Fehler: ${data.message}`;
-        }
-        
-        setAiGeneratedText(errorMessage);
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('❌ Keine JSON Response:', text);
+        setAiGeneratedText(`❌ Fehler: Server hat kein JSON zurückgegeben.\n\nAntwort: ${text.substring(0, 200)}`);
         return;
       }
 
-      // Erfolg: Text der KI setzen
-      console.log('✅ Exposé erfolgreich generiert');
-      setAiGeneratedText(data.text);
+      const data = await response.json();
+      console.log('📊 Data:', data);
 
-      // Nach 2 Sekunden: Beta-Modal öffnen
-      setTimeout(() => {
-        openBetaModal();
-      }, 2000);
+      if (!response.ok) {
+        console.error('❌ API-Fehler:', data);
+        setAiGeneratedText(`❌ Fehler: ${data.message || data.error || 'Unbekannter Fehler'}`);
+        return;
+      }
+
+      if (data.success && data.text) {
+        console.log('✅ Exposé generiert!');
+        setAiGeneratedText(data.text);
+        
+        setTimeout(() => {
+          openBetaModal();
+        }, 2000);
+      } else {
+        setAiGeneratedText('❌ Fehler: Kein Text erhalten');
+      }
 
     } catch (error) {
       console.error('❌ Netzwerk-Fehler:', error);
-      const errorMessage = `🌐 Verbindungsfehler\n\nKeine Verbindung zur KI möglich.\n\nDetails: ${error.message}`;
-      setAiGeneratedText(errorMessage);
+      setAiGeneratedText(`❌ Verbindungsfehler\n\nDetails: ${error.message}\n\nBitte prüfen Sie die Browser-Konsole (F12).`);
     }
   };
 
-  // ============================================
-  // KEYBOARD EVENT HANDLERS (ESC to close modals)
-  // ============================================
-  
   useEffect(() => {
     const handleEscape = (e) => {
       if (e.key === 'Escape') {
@@ -514,10 +304,6 @@ const handleBetaSubmit = async (e) => {
     return () => document.removeEventListener('keydown', handleEscape);
   }, [legalContent, showBetaModal]);
 
-  // ============================================
-  // RENDER
-  // ============================================
-  
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
       
@@ -531,35 +317,23 @@ const handleBetaSubmit = async (e) => {
             <span className="text-2xl font-bold text-white tracking-tight">Exposé-Profi</span>
           </div>
           <nav className="hidden md:flex space-x-8">
-            <button
-              onClick={() => scrollToSection('vorteile')}
-              className="text-gray-300 hover:text-[#C5A059] transition-colors font-medium"
-            >
+            <button onClick={() => scrollToSection('vorteile')} className="text-gray-300 hover:text-[#C5A059] transition-colors font-medium">
               Vorteile
             </button>
-            <button
-              onClick={() => scrollToSection('preise')}
-              className="text-gray-300 hover:text-[#C5A059] transition-colors font-medium"
-            >
+            <button onClick={() => scrollToSection('preise')} className="text-gray-300 hover:text-[#C5A059] transition-colors font-medium">
               Preise
             </button>
-            <button
-              onClick={() => scrollToSection('kontakt')}
-              className="text-gray-300 hover:text-[#C5A059] transition-colors font-medium"
-            >
+            <button onClick={() => scrollToSection('kontakt')} className="text-gray-300 hover:text-[#C5A059] transition-colors font-medium">
               Kontakt
             </button>
-            <button 
-              onClick={openBetaModal}
-              className="bg-[#C5A059] hover:bg-[#B39050] text-white px-6 py-2 rounded-lg font-semibold transition-all"
-            >
+            <button onClick={openBetaModal} className="bg-[#C5A059] hover:bg-[#B39050] text-white px-6 py-2 rounded-lg font-semibold transition-all">
               Beta-Zugang
             </button>
           </nav>
         </div>
       </header>
 
-      {/* HERO SECTION */}
+      {/* HERO */}
       <section className="py-24 md:py-32 bg-gradient-to-b from-[#0A192F] to-[#112240] text-white relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-0 w-96 h-96 bg-[#C5A059] rounded-full filter blur-3xl"></div>
@@ -580,16 +354,10 @@ const handleBetaSubmit = async (e) => {
             Rechtssicher nach GEG. Für Makler, die keine Zeit verschwenden.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button 
-              onClick={() => scrollToSection('generator')}
-              className="bg-[#C5A059] hover:bg-[#B39050] text-white px-10 py-4 rounded-lg text-lg font-semibold transition-all transform hover:scale-105 shadow-2xl"
-            >
+            <button onClick={() => scrollToSection('generator')} className="bg-[#C5A059] hover:bg-[#B39050] text-white px-10 py-4 rounded-lg text-lg font-semibold transition-all transform hover:scale-105 shadow-2xl">
               Jetzt kostenlos testen
             </button>
-            <button 
-              onClick={() => scrollToSection('preise')}
-              className="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white border border-white/30 px-10 py-4 rounded-lg text-lg font-semibold transition-all"
-            >
+            <button onClick={() => scrollToSection('preise')} className="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white border border-white/30 px-10 py-4 rounded-lg text-lg font-semibold transition-all">
               Preise ansehen
             </button>
           </div>
@@ -600,9 +368,7 @@ const handleBetaSubmit = async (e) => {
       <section className="py-20 bg-white">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-[#0A192F] mb-4">
-              So einfach geht's
-            </h2>
+            <h2 className="text-4xl md:text-5xl font-bold text-[#0A192F] mb-4">So einfach geht's</h2>
             <p className="text-xl text-gray-600">Vom Foto zum fertigen PDF in drei Schritten</p>
           </div>
           
@@ -612,9 +378,7 @@ const handleBetaSubmit = async (e) => {
                 <div className="w-24 h-24 bg-gradient-to-br from-[#C5A059] to-[#A68B4A] rounded-2xl flex items-center justify-center mx-auto shadow-xl transform group-hover:scale-110 transition-transform duration-300">
                   <Upload className="w-12 h-12 text-white" />
                 </div>
-                <div className="absolute -top-4 -right-4 w-12 h-12 bg-[#0A192F] rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                  1
-                </div>
+                <div className="absolute -top-4 -right-4 w-12 h-12 bg-[#0A192F] rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">1</div>
               </div>
               <h3 className="text-2xl font-bold text-[#0A192F] mb-4">Fotos hochladen</h3>
               <p className="text-gray-600 leading-relaxed">
@@ -627,9 +391,7 @@ const handleBetaSubmit = async (e) => {
                 <div className="w-24 h-24 bg-gradient-to-br from-[#C5A059] to-[#A68B4A] rounded-2xl flex items-center justify-center mx-auto shadow-xl transform group-hover:scale-110 transition-transform duration-300">
                   <Sparkles className="w-12 h-12 text-white" />
                 </div>
-                <div className="absolute -top-4 -right-4 w-12 h-12 bg-[#0A192F] rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                  2
-                </div>
+                <div className="absolute -top-4 -right-4 w-12 h-12 bg-[#0A192F] rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">2</div>
               </div>
               <h3 className="text-2xl font-bold text-[#0A192F] mb-4">KI-Erstellung</h3>
               <p className="text-gray-600 leading-relaxed">
@@ -642,9 +404,7 @@ const handleBetaSubmit = async (e) => {
                 <div className="w-24 h-24 bg-gradient-to-br from-[#C5A059] to-[#A68B4A] rounded-2xl flex items-center justify-center mx-auto shadow-xl transform group-hover:scale-110 transition-transform duration-300">
                   <Download className="w-12 h-12 text-white" />
                 </div>
-                <div className="absolute -top-4 -right-4 w-12 h-12 bg-[#0A192F] rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                  3
-                </div>
+                <div className="absolute -top-4 -right-4 w-12 h-12 bg-[#0A192F] rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">3</div>
               </div>
               <h3 className="text-2xl font-bold text-[#0A192F] mb-4">PDF-Download</h3>
               <p className="text-gray-600 leading-relaxed">
@@ -655,18 +415,16 @@ const handleBetaSubmit = async (e) => {
         </div>
       </section>
 
-      {/* GENERATOR SECTION */}
+      {/* GENERATOR */}
       <section id="generator" className="py-20 bg-gradient-to-b from-slate-50 to-white">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-12">
-            <h2 className="text-4xl md:text-5xl font-bold text-[#0A192F] mb-4">
-              Erstellen Sie Ihr erstes Exposé
-            </h2>
+            <h2 className="text-4xl md:text-5xl font-bold text-[#0A192F] mb-4">Erstellen Sie Ihr erstes Exposé</h2>
             <p className="text-xl text-gray-600">Kostenlos testen – ohne Anmeldung</p>
           </div>
           
           <div className="grid lg:grid-cols-2 gap-10">
-            {/* Left Column - Upload */}
+            {/* Left - Uploads */}
             <div className="space-y-6">
               <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
                 <div className="flex items-center space-x-2 mb-4">
@@ -679,13 +437,8 @@ const handleBetaSubmit = async (e) => {
                       <Image className="w-8 h-8 text-[#C5A059]" />
                     </div>
                     <h4 className="text-base font-semibold text-[#0A192F] mb-2">Ihr Logo hochladen</h4>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Nutzen Sie Ihre eigene Corporate Identity
-                    </p>
-                    <button 
-                      onClick={handleLogoUpload}
-                      className="bg-[#0A192F] text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-opacity-90 transition-all"
-                    >
+                    <p className="text-sm text-gray-600 mb-4">Nutzen Sie Ihre eigene Corporate Identity</p>
+                    <button onClick={handleLogoUpload} className="bg-[#0A192F] text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-opacity-90 transition-all">
                       {uploadedLogo ? 'Logo ändern' : 'Logo auswählen'}
                     </button>
                     {uploadedLogo && (
@@ -703,13 +456,8 @@ const handleBetaSubmit = async (e) => {
                 <div className="border-2 border-dashed border-[#C5A059]/50 rounded-xl p-6 hover:border-[#C5A059] transition-colors cursor-pointer">
                   <div className="text-center">
                     <Image className="w-10 h-10 text-[#C5A059] mx-auto mb-3" />
-                    <p className="text-sm text-gray-600 mb-4">
-                      Bis zu 20 Fotos (JPG, PNG)
-                    </p>
-                    <button 
-                      onClick={handlePhotoUpload}
-                      className="bg-[#0A192F] text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-opacity-90 transition-all"
-                    >
+                    <p className="text-sm text-gray-600 mb-4">Bis zu 20 Fotos (JPG, PNG)</p>
+                    <button onClick={handlePhotoUpload} className="bg-[#0A192F] text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-opacity-90 transition-all">
                       Fotos auswählen
                     </button>
                   </div>
@@ -718,15 +466,8 @@ const handleBetaSubmit = async (e) => {
                 {uploadedPhotos.length > 0 && (
                   <div className="mt-4">
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm font-medium text-gray-700">
-                        {uploadedPhotos.length} {uploadedPhotos.length === 1 ? 'Foto' : 'Fotos'}
-                      </p>
-                      <button 
-                        onClick={() => setUploadedPhotos([])}
-                        className="text-xs text-red-600 hover:text-red-700"
-                      >
-                        Alle entfernen
-                      </button>
+                      <p className="text-sm font-medium text-gray-700">{uploadedPhotos.length} {uploadedPhotos.length === 1 ? 'Foto' : 'Fotos'}</p>
+                      <button onClick={() => setUploadedPhotos([])} className="text-xs text-red-600 hover:text-red-700">Alle entfernen</button>
                     </div>
                     <div className="grid grid-cols-4 gap-2 max-h-40 overflow-y-auto">
                       {uploadedPhotos.map((photo) => (
@@ -734,10 +475,7 @@ const handleBetaSubmit = async (e) => {
                           <div className="w-full h-20 bg-gradient-to-br from-slate-100 to-slate-200 rounded-lg flex items-center justify-center">
                             <Image className="w-6 h-6 text-gray-400" />
                           </div>
-                          <button
-                            onClick={() => removePhoto(photo.id)}
-                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
+                          <button onClick={() => removePhoto(photo.id)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <X className="w-3 h-3" />
                           </button>
                         </div>
@@ -752,13 +490,8 @@ const handleBetaSubmit = async (e) => {
                 <div className="border-2 border-dashed border-[#C5A059]/50 rounded-xl p-6 hover:border-[#C5A059] transition-colors cursor-pointer">
                   <div className="text-center">
                     <FileInput className="w-10 h-10 text-[#C5A059] mx-auto mb-3" />
-                    <p className="text-sm text-gray-600 mb-4">
-                      Mehrere Stockwerke (PDF, JPG, PNG)
-                    </p>
-                    <button 
-                      onClick={handleFloorPlanUpload}
-                      className="bg-[#0A192F] text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-opacity-90 transition-all"
-                    >
+                    <p className="text-sm text-gray-600 mb-4">Mehrere Stockwerke (PDF, JPG, PNG)</p>
+                    <button onClick={handleFloorPlanUpload} className="bg-[#0A192F] text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-opacity-90 transition-all">
                       Grundriss hinzufügen
                     </button>
                   </div>
@@ -772,10 +505,7 @@ const handleBetaSubmit = async (e) => {
                           <FileInput className="w-4 h-4 text-[#C5A059]" />
                           <span className="text-sm text-gray-700">{plan.name}</span>
                         </div>
-                        <button
-                          onClick={() => removeFloorPlan(plan.id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
+                        <button onClick={() => removeFloorPlan(plan.id)} className="text-red-600 hover:text-red-700">
                           <X className="w-4 h-4" />
                         </button>
                       </div>
@@ -785,16 +515,14 @@ const handleBetaSubmit = async (e) => {
               </div>
             </div>
 
-            {/* Right Column - Form */}
+            {/* Right - Form */}
             <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
               <h3 className="text-lg font-bold text-[#0A192F] mb-6">Objektdaten</h3>
               
               <div className="space-y-5">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-[#0A192F] mb-2">
-                      Wohnfläche (m²) *
-                    </label>
+                    <label className="block text-sm font-semibold text-[#0A192F] mb-2">Wohnfläche (m²) *</label>
                     <input
                       type="text"
                       inputMode="numeric"
@@ -806,9 +534,7 @@ const handleBetaSubmit = async (e) => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-[#0A192F] mb-2">
-                      Zimmer *
-                    </label>
+                    <label className="block text-sm font-semibold text-[#0A192F] mb-2">Zimmer *</label>
                     <input
                       type="text"
                       inputMode="decimal"
@@ -822,9 +548,7 @@ const handleBetaSubmit = async (e) => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-[#0A192F] mb-2">
-                    Baujahr (optional)
-                  </label>
+                  <label className="block text-sm font-semibold text-[#0A192F] mb-2">Baujahr (optional)</label>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -839,9 +563,7 @@ const handleBetaSubmit = async (e) => {
                 <div className="border-t border-gray-200 pt-5"></div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-[#0A192F] mb-3">
-                    Ausstattung
-                  </label>
+                  <label className="block text-sm font-semibold text-[#0A192F] mb-3">Ausstattung</label>
                   <div className="grid grid-cols-2 gap-2">
                     {[...featureCategories.aussenbereich, ...featureCategories.innenraum].slice(0, 8).map((feature) => {
                       const category = featureCategories.aussenbereich.includes(feature) ? 'aussenbereich' : 'innenraum';
@@ -863,9 +585,7 @@ const handleBetaSubmit = async (e) => {
                 <div className="border-t border-gray-200 pt-5"></div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-[#0A192F] mb-3">
-                    Energieausweis (GEG-Pflicht)
-                  </label>
+                  <label className="block text-sm font-semibold text-[#0A192F] mb-3">Energieausweis (GEG-Pflicht)</label>
                   
                   <button
                     type="button"
@@ -877,30 +597,10 @@ const handleBetaSubmit = async (e) => {
                         : 'bg-slate-50 border-2 border-dashed border-[#C5A059] text-[#0A192F] hover:bg-slate-100'
                     }`}
                   >
-                    {energyUploadStatus === 'idle' && (
-                      <>
-                        <Upload className="w-4 h-4 mr-2" />
-                        Energieausweis hochladen
-                      </>
-                    )}
-                    {energyUploadStatus === 'uploading' && (
-                      <>
-                        <Sparkles className="w-4 h-4 mr-2 animate-pulse" />
-                        Wird hochgeladen...
-                      </>
-                    )}
-                    {energyUploadStatus === 'extracting' && (
-                      <>
-                        <Sparkles className="w-4 h-4 mr-2 animate-spin" />
-                        KI extrahiert Daten...
-                      </>
-                    )}
-                    {energyUploadStatus === 'complete' && (
-                      <>
-                        <Check className="w-4 h-4 mr-2" />
-                        Daten erfolgreich extrahiert
-                      </>
-                    )}
+                    {energyUploadStatus === 'idle' && (<><Upload className="w-4 h-4 mr-2" />Energieausweis hochladen</>)}
+                    {energyUploadStatus === 'uploading' && (<><Sparkles className="w-4 h-4 mr-2 animate-pulse" />Wird hochgeladen...</>)}
+                    {energyUploadStatus === 'extracting' && (<><Sparkles className="w-4 h-4 mr-2 animate-spin" />KI extrahiert Daten...</>)}
+                    {energyUploadStatus === 'complete' && (<><Check className="w-4 h-4 mr-2" />Daten erfolgreich extrahiert</>)}
                   </button>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -948,9 +648,7 @@ const handleBetaSubmit = async (e) => {
                 </button>
 
                 {!isFormValid() && (
-                  <p className="text-xs text-red-600 text-center">
-                    Bitte füllen Sie alle Pflichtfelder (*) aus
-                  </p>
+                  <p className="text-xs text-red-600 text-center">Bitte füllen Sie alle Pflichtfelder (*) aus</p>
                 )}
 
                 <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
@@ -963,7 +661,7 @@ const handleBetaSubmit = async (e) => {
             </div>
           </div>
 
-          {/* Text Preview Section */}
+          {/* Text Preview */}
           {showPreview && (
             <div className="mt-10 bg-white rounded-2xl p-8 shadow-xl border border-gray-100">
               <div className="flex items-center justify-between mb-6">
@@ -991,13 +689,11 @@ const handleBetaSubmit = async (e) => {
         </div>
       </section>
 
-      {/* BENEFITS SECTION */}
+      {/* BENEFITS */}
       <section id="vorteile" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-[#0A192F] mb-4">
-              Warum Exposé-Profi?
-            </h2>
+            <h2 className="text-4xl md:text-5xl font-bold text-[#0A192F] mb-4">Warum Exposé-Profi?</h2>
             <p className="text-xl text-gray-600">Die Vorteile für professionelle Makler</p>
           </div>
           
@@ -1007,9 +703,7 @@ const handleBetaSubmit = async (e) => {
                 <Clock className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-2xl font-bold text-[#0A192F] mb-4">90% Zeitersparnis</h3>
-              <p className="text-gray-600 leading-relaxed">
-                Von 2 Stunden auf 5 Minuten. Fokus auf Verkauf statt Verwaltung.
-              </p>
+              <p className="text-gray-600 leading-relaxed">Von 2 Stunden auf 5 Minuten. Fokus auf Verkauf statt Verwaltung.</p>
             </div>
 
             <div className="bg-gradient-to-br from-slate-50 to-white p-8 rounded-2xl border border-gray-100 hover:shadow-xl transition-all">
@@ -1017,9 +711,7 @@ const handleBetaSubmit = async (e) => {
                 <Palette className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-2xl font-bold text-[#0A192F] mb-4">Ihr Branding</h3>
-              <p className="text-gray-600 leading-relaxed">
-                Logo, Farben, Schriftarten – alles in Ihrer Corporate Identity.
-              </p>
+              <p className="text-gray-600 leading-relaxed">Logo, Farben, Schriftarten – alles in Ihrer Corporate Identity.</p>
             </div>
 
             <div className="bg-gradient-to-br from-slate-50 to-white p-8 rounded-2xl border border-gray-100 hover:shadow-xl transition-all">
@@ -1027,21 +719,17 @@ const handleBetaSubmit = async (e) => {
                 <Shield className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-2xl font-bold text-[#0A192F] mb-4">GEG-konform</h3>
-              <p className="text-gray-600 leading-relaxed">
-                Automatische Prüfung aller Pflichtangaben nach deutschem Recht.
-              </p>
+              <p className="text-gray-600 leading-relaxed">Automatische Prüfung aller Pflichtangaben nach deutschem Recht.</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* PRICING SECTION */}
+      {/* PRICING */}
       <section id="preise" className="py-20 bg-gradient-to-b from-slate-50 to-white">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-[#0A192F] mb-4">
-              Transparente Preise
-            </h2>
+            <h2 className="text-4xl md:text-5xl font-bold text-[#0A192F] mb-4">Transparente Preise</h2>
             <p className="text-xl text-gray-600">Wählen Sie das passende Paket für Ihr Geschäft</p>
           </div>
           
@@ -1079,18 +767,13 @@ const handleBetaSubmit = async (e) => {
                 </li>
               </ul>
               
-              <button 
-                onClick={openBetaModal}
-                className="w-full bg-gray-900 hover:bg-gray-800 text-white py-4 rounded-lg font-semibold transition-all"
-              >
+              <button onClick={openBetaModal} className="w-full bg-gray-900 hover:bg-gray-800 text-white py-4 rounded-lg font-semibold transition-all">
                 Beta-Zugang anfordern
               </button>
             </div>
 
             <div className="bg-gradient-to-br from-[#0A192F] to-[#112240] rounded-2xl p-8 border-2 border-[#C5A059] relative overflow-hidden shadow-2xl">
-              <div className="absolute top-4 right-4 bg-[#C5A059] text-white px-4 py-1 rounded-full text-sm font-bold">
-                BELIEBT
-              </div>
+              <div className="absolute top-4 right-4 bg-[#C5A059] text-white px-4 py-1 rounded-full text-sm font-bold">BELIEBT</div>
               
               <div className="text-center mb-6">
                 <h3 className="text-2xl font-bold text-white mb-2">Pro-Abo</h3>
@@ -1128,10 +811,7 @@ const handleBetaSubmit = async (e) => {
                 </li>
               </ul>
               
-              <button 
-                onClick={openBetaModal}
-                className="w-full bg-gradient-to-r from-[#C5A059] to-[#A68B4A] hover:from-[#B39050] hover:to-[#957A3F] text-white py-4 rounded-lg font-bold transition-all transform hover:scale-105 shadow-lg"
-              >
+              <button onClick={openBetaModal} className="w-full bg-gradient-to-r from-[#C5A059] to-[#A68B4A] hover:from-[#B39050] hover:to-[#957A3F] text-white py-4 rounded-lg font-bold transition-all transform hover:scale-105 shadow-lg">
                 Beta-Zugang anfordern
               </button>
             </div>
@@ -1151,8 +831,7 @@ const handleBetaSubmit = async (e) => {
                 <span className="text-2xl font-bold">Exposé-Profi</span>
               </div>
               <p className="text-gray-400 leading-relaxed mb-6">
-                Die führende KI-Lösung für professionelle Immobilien-Exposés. 
-                Entwickelt von Maklern für Makler.
+                Die führende KI-Lösung für professionelle Immobilien-Exposés. Entwickelt von Maklern für Makler.
               </p>
             </div>
 
@@ -1178,12 +857,8 @@ const handleBetaSubmit = async (e) => {
 
           <div className="border-t border-gray-800 pt-8">
             <div className="flex flex-col md:flex-row justify-between items-center">
-              <p className="text-gray-400 text-sm">
-                © 2025 Exposé-Profi. Alle Rechte vorbehalten.
-              </p>
-              <p className="text-gray-400 text-sm mt-4 md:mt-0">
-                Made with ❤️ in Deutschland
-              </p>
+              <p className="text-gray-400 text-sm">© 2025 Exposé-Profi. Alle Rechte vorbehalten.</p>
+              <p className="text-gray-400 text-sm mt-4 md:mt-0">Made with ❤️ in Deutschland</p>
             </div>
           </div>
         </div>
@@ -1195,10 +870,11 @@ const handleBetaSubmit = async (e) => {
           <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full my-8 relative" onClick={(e) => e.stopPropagation()}>
             <div className="sticky top-0 bg-white border-b border-gray-200 px-8 py-6 rounded-t-2xl flex items-center justify-between z-10">
               <h2 className="text-3xl font-bold text-[#0A192F]">{legalTexts[legalContent].title}</h2>
-              <button onClick={closeLegalModal} className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors">
+              <button onClick={closeLegalModal} className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors" aria-label="Schließen">
                 <X className="w-6 h-6 text-gray-600" />
               </button>
             </div>
+            
             <div className="px-8 py-6 max-h-[70vh] overflow-y-auto">
               <div className="prose prose-slate max-w-none text-gray-700 leading-relaxed">
                 {legalTexts[legalContent].sections.map((section, index) => (
@@ -1211,8 +887,11 @@ const handleBetaSubmit = async (e) => {
                 ))}
               </div>
             </div>
+            
             <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-8 py-4 rounded-b-2xl">
-              <button onClick={closeLegalModal} className="w-full bg-[#0A192F] hover:bg-[#0A192F]/90 text-white py-3 rounded-lg font-semibold transition-all">Schließen</button>
+              <button onClick={closeLegalModal} className="w-full bg-[#0A192F] hover:bg-[#0A192F]/90 text-white py-3 rounded-lg font-semibold transition-all">
+                Schließen
+              </button>
             </div>
           </div>
         </div>
@@ -1221,9 +900,10 @@ const handleBetaSubmit = async (e) => {
       {showBetaModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={closeBetaModal}>
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 relative" onClick={(e) => e.stopPropagation()}>
-            <button onClick={closeBetaModal} className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors">
+            <button onClick={closeBetaModal} className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors" aria-label="Schließen">
               <X className="w-5 h-5 text-gray-600" />
             </button>
+
             {!betaSubmitted ? (
               <>
                 <div className="text-center mb-6">
@@ -1231,14 +911,31 @@ const handleBetaSubmit = async (e) => {
                     <Sparkles className="w-8 h-8 text-white" />
                   </div>
                   <h3 className="text-2xl font-bold text-[#0A192F] mb-2">Beta-Zugang anfordern</h3>
-                  <p className="text-gray-600">Wir benachrichtigen Sie, sobald Ihr Zugang bereit ist.</p>
+                  <p className="text-gray-600">
+                    Vielen Dank für Ihr Interesse! Wir befinden uns aktuell in einer exklusiven Beta-Phase. 
+                    Hinterlassen Sie Ihre E-Mail-Adresse, und wir benachrichtigen Sie, sobald Ihr Zugang bereit ist.
+                  </p>
                 </div>
+
                 <form onSubmit={handleBetaSubmit} className="space-y-4">
                   <div>
                     <label className="block text-sm font-semibold text-[#0A192F] mb-2">E-Mail-Adresse *</label>
-                    <input type="email" value={betaEmail} onChange={(e) => setBetaEmail(e.target.value)} placeholder="ihre.email@beispiel.de" required className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#C5A059] focus:ring-2 focus:ring-[#C5A059]/20 outline-none transition-all" />
+                    <input
+                      type="email"
+                      value={betaEmail}
+                      onChange={(e) => setBetaEmail(e.target.value)}
+                      placeholder="ihre.email@beispiel.de"
+                      required
+                      className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#C5A059] focus:ring-2 focus:ring-[#C5A059]/20 outline-none transition-all"
+                    />
                   </div>
-                  <button type="submit" className="w-full bg-gradient-to-r from-[#C5A059] to-[#A68B4A] hover:from-[#B39050] hover:to-[#957A3F] text-white py-3 rounded-lg font-semibold transition-all transform hover:scale-105 shadow-lg">Beta-Zugang sichern</button>
+
+                  <button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-[#C5A059] to-[#A68B4A] hover:from-[#B39050] hover:to-[#957A3F] text-white py-3 rounded-lg font-semibold transition-all transform hover:scale-105 shadow-lg"
+                  >
+                    Beta-Zugang sichern
+                  </button>
                 </form>
               </>
             ) : (
@@ -1247,7 +944,10 @@ const handleBetaSubmit = async (e) => {
                   <Check className="w-8 h-8 text-green-600" />
                 </div>
                 <h3 className="text-2xl font-bold text-[#0A192F] mb-2">Vielen Dank!</h3>
-                <p className="text-gray-600">Wir melden uns in Kürze bei Ihnen.</p>
+                <p className="text-gray-600">
+                  Wir haben Ihre E-Mail-Adresse erhalten und werden Sie benachrichtigen, 
+                  sobald Ihr Beta-Zugang freigeschaltet ist.
+                </p>
               </div>
             )}
           </div>
