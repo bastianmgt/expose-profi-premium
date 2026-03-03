@@ -1,5 +1,5 @@
 // api/generate.js
-// Vision-fähige Version mit Bildanalyse und OCR
+// KOMPLETT FERTIGE VERSION - Vision + OCR
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -43,7 +43,6 @@ export default async function handler(req, res) {
     console.log('[OK] PropertyData empfangen');
     console.log('[INFO] Anzahl Fotos:', photos?.length || 0);
 
-    // Erstelle Vision-fähigen Prompt
     const messages = createVisionMessages(propertyData, photos);
 
     console.log('[START] OpenAI Vision Request...');
@@ -106,8 +105,7 @@ export default async function handler(req, res) {
   }
 }
 
-// Funktion: OCR für Energieausweis
-async function handleEnergyOCR(apiKey, imageBas64, res) {
+async function handleEnergyOCR(apiKey, imageBase64, res) {
   try {
     console.log('[START] Energieausweis OCR...');
     
@@ -149,7 +147,7 @@ Wenn ein Wert nicht eindeutig lesbar ist, setze null.`
               {
                 type: 'image_url',
                 image_url: {
-                  url: imageBas64,
+                  url: imageBase64,
                   detail: 'high'
                 }
               }
@@ -180,10 +178,8 @@ Wenn ein Wert nicht eindeutig lesbar ist, setze null.`
       });
     }
 
-    // Parse JSON from response
     let extractedData;
     try {
-      // Remove markdown code blocks if present
       const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
       extractedData = JSON.parse(cleanContent);
     } catch (e) {
@@ -213,11 +209,9 @@ Wenn ein Wert nicht eindeutig lesbar ist, setze null.`
   }
 }
 
-// Funktion: Vision Messages erstellen
 function createVisionMessages(propertyData, photos) {
   const hasPhotos = photos && photos.length > 0;
   
-  // System Message
   const systemMessage = {
     role: 'system',
     content: `Du bist ein professioneller Immobilienmakler, der verkaufsstarke Exposé-Texte schreibt.
@@ -228,7 +222,6 @@ ${hasPhotos ? `Du hast Zugriff auf Fotos der Immobilie. Analysiere sie aktiv und
 - Raumaufteilung und Größenwirkung
 - Ausstattungsqualität
 - Besondere architektonische Details
-- Zustand und Pflegezustand
 
 WICHTIG: Nutze nur Details, die du auf den Bildern WIRKLICH siehst. Keine Fantasie!` : ''}
 
@@ -240,18 +233,15 @@ KRITISCHE REGEL: Nutze NUR bereitgestellte Informationen!
 Schreibe verkaufsstark, emotional und professionell auf Deutsch.`
   };
 
-  // User Content (Text + Images)
   const userContent = [];
   
-  // Text-Teil
   userContent.push({
     type: 'text',
     text: createDetailedPrompt(propertyData, hasPhotos)
   });
 
-  // Bild-Teile
   if (hasPhotos) {
-    photos.forEach((photoBase64, index) => {
+    photos.forEach((photoBase64) => {
       userContent.push({
         type: 'image_url',
         image_url: {
@@ -271,7 +261,6 @@ Schreibe verkaufsstark, emotional und professionell auf Deutsch.`
   ];
 }
 
-// Funktion: Detaillierter Prompt
 function createDetailedPrompt(data, hasPhotos) {
   const objekttyp = data.objekttyp || '[OBJEKTTYP PRÜFEN]';
   const vermarktungsart = data.vermarktungsart || '[VERMARKTUNG PRÜFEN]';
@@ -346,13 +335,8 @@ ANALYSIERE AKTIV:
 3. Raumwirkung und Größe
 4. Ausstattungsqualität
 5. Besondere Details (Stuck, Balken, etc.)
-6. Modernisierungsgrad
-7. Pflegezustand
 
 INTEGRIERE diese Beobachtungen natürlich in den Text!
-Beispiel: "Die hochwertigen Eichenparkett-Böden..." oder "Durch die bodentiefen Fenster..."
-
-WICHTIG: Nur Details nutzen, die du WIRKLICH auf den Bildern siehst!
 
 ` : ''}═══════════════════════════════════════
 AUFGABE
@@ -361,41 +345,18 @@ AUFGABE
 Schreibe ein verkaufsstarkes Exposé mit dieser STRUKTUR:
 
 1. ÜBERSCHRIFT (1 Zeile)
-   - Attraktiv und konkret
-
 2. EINLEITUNG (2-3 Sätze)
-   - Emotional ansprechend
-   ${hasPhotos ? '- Beziehe Bildeindrücke ein!' : ''}
-
+${hasPhotos ? '   - Beziehe Bildeindrücke ein!' : ''}
 3. OBJEKTBESCHREIBUNG (4-5 Sätze)
-   ${hasPhotos ? '- Beschreibe was du auf den Bildern siehst\n   - Materialien, Licht, Raumwirkung konkret benennen' : '- Beschreibe Räume und Wohngefühl'}
-
+${hasPhotos ? '   - Beschreibe was du auf den Bildern siehst' : ''}
 4. LAGE (3-4 Sätze)
-   ${lageInfo !== '[LAGE PRÜFEN]' 
-     ? `- Beschreibe konkret ${ort || 'diese Lage'}` 
-     : '- Schreibe: "Lage auf Anfrage [LAGE PRÜFEN]"'}
-
 5. AUSSTATTUNG & HIGHLIGHTS
-   - Liste die angegebenen Features
-   - Nutze ✓ Zeichen
-   ${hasPhotos ? '- Ergänze sichtbare Details von den Fotos' : ''}
-
 6. ENERGETISCHE DATEN
-   - Exakt wie angegeben
-   - Bei fehlenden Daten: Platzhalter
-
 7. PREIS & KONDITIONEN
-   - Preis wie angegeben
-
 8. FAZIT & CALL-TO-ACTION (2 Sätze)
-
-═══════════════════════════════════════
-REGELN
-═══════════════════════════════════════
 
 ✓ Nutze NUR bereitgestellte Daten + Bildinhalte
 ✓ Platzhalter für fehlende Infos
-✓ Keine Fantasie-Details
 ✓ Professionell und verkaufsstark
 ✓ Ca. 400-500 Wörter
 
