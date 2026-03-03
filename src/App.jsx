@@ -21,7 +21,9 @@ import {
   Key,
   Lock,
   Unlock,
-  Loader2
+  Loader2,
+  Eye,
+  CreditCard
 } from 'lucide-react';
 
 export default function ExposeProfiLanding() {
@@ -32,9 +34,11 @@ export default function ExposeProfiLanding() {
   const [uploadedLogo, setUploadedLogo] = useState(null);
   const [uploadedEnergyCert, setUploadedEnergyCert] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [aiGeneratedText, setAiGeneratedText] = useState('');
   const [legalContent, setLegalContent] = useState(null);
   const [showBetaModal, setShowBetaModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [betaEmail, setBetaEmail] = useState('');
   const [betaSubmitted, setBetaSubmitted] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(false);
@@ -69,11 +73,55 @@ export default function ExposeProfiLanding() {
     effizienzklasse: ''
   });
 
+  // ERWEITERTE AUSSTATTUNGS-KATEGORIEN
   const featureCategories = {
-    aussenbereich: ['Balkon', 'Terrasse', 'Garten', 'Dachterrasse', 'Loggia'],
-    innenraum: ['Einbauküche', 'Gäste-WC', 'Kamin', 'Fußbodenheizung', 'Abstellraum'],
-    parkenKeller: ['Garage', 'Tiefgarage', 'Außenstellplatz', 'Carport', 'Kellerraum'],
-    technikKomfort: ['Aufzug', 'Barrierefrei', 'Smart Home', 'Klimaanlage']
+    aussenbereich: [
+      'Balkon', 
+      'Terrasse', 
+      'Garten', 
+      'Dachterrasse', 
+      'Loggia',
+      'Wintergarten',
+      'Pool',
+      'Sauna'
+    ],
+    innenraum: [
+      'Einbauküche', 
+      'Gäste-WC', 
+      'Kamin', 
+      'Fußbodenheizung', 
+      'Abstellraum',
+      'Ankleidezimmer',
+      'Vorratskammer',
+      'Hauswirtschaftsraum',
+      'Einbauschränke',
+      'Parkettboden',
+      'Bodentiefe Fenster',
+      'Fliesen',
+      'Marmorbad'
+    ],
+    parkenKeller: [
+      'Garage', 
+      'Tiefgarage', 
+      'Außenstellplatz', 
+      'Carport', 
+      'Kellerraum',
+      'Doppelgarage',
+      'Stellplatz mit E-Ladestation',
+      'Fahrradkeller'
+    ],
+    technikKomfort: [
+      'Aufzug', 
+      'Barrierefrei', 
+      'Smart Home', 
+      'Klimaanlage',
+      'Photovoltaik',
+      'Wärmepumpe',
+      'Videosprechanlage',
+      'Alarmanlage',
+      'Rollläden elektrisch',
+      'Zentralstaubsauger'
+    ]
   };
 
   const legalTexts = {
@@ -127,7 +175,6 @@ export default function ExposeProfiLanding() {
   };
 
   // HILFSFUNKTIONEN
-
   const isFormValid = () => {
     return propertyData.wohnflaeche.trim() !== '' && 
            propertyData.zimmer.trim() !== '' &&
@@ -164,7 +211,6 @@ export default function ExposeProfiLanding() {
         : [...prev[category], feature]
     }));
   };
-
   // DATEI-KOMPRIMIERUNG
   const compressImage = (file) => {
     return new Promise((resolve, reject) => {
@@ -178,7 +224,6 @@ export default function ExposeProfiLanding() {
           let width = img.width;
           let height = img.height;
           
-          // Resize wenn zu groß
           const MAX_WIDTH = 1024;
           const MAX_HEIGHT = 1024;
           
@@ -200,7 +245,6 @@ export default function ExposeProfiLanding() {
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
           
-          // Convert to base64 (JPEG, 80% quality)
           const base64 = canvas.toDataURL('image/jpeg', 0.8);
           resolve(base64);
         };
@@ -224,7 +268,6 @@ export default function ExposeProfiLanding() {
       return;
     }
     
-    // Limit: 20 Fotos total
     const remaining = 20 - uploadedPhotos.length;
     const toProcess = imageFiles.slice(0, remaining);
     
@@ -294,7 +337,6 @@ export default function ExposeProfiLanding() {
         if (file.type.startsWith('image/')) {
           base64 = await compressImage(file);
         } else if (file.type === 'application/pdf') {
-          // PDF zu Base64
           base64 = await new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => resolve(reader.result);
@@ -338,7 +380,6 @@ export default function ExposeProfiLanding() {
       if (file.type.startsWith('image/')) {
         base64 = await compressImage(file);
       } else {
-        // PDF zu Base64
         base64 = await new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result);
@@ -353,7 +394,6 @@ export default function ExposeProfiLanding() {
         base64: base64
       });
       
-      // OCR durchführen
       setEnergyUploadStatus('extracting');
       
       const response = await fetch('/api/generate', {
@@ -370,7 +410,6 @@ export default function ExposeProfiLanding() {
       const data = await response.json();
       
       if (data.success && data.data) {
-        // Befülle States mit OCR-Daten
         setPropertyData(prev => ({
           ...prev,
           effizienzklasse: data.data.effizienzklasse || '',
@@ -453,6 +492,7 @@ export default function ExposeProfiLanding() {
     }
 
     setShowPreview(false);
+    setShowPDFPreview(false);
     setIsGenerating(true);
     setGenerationProgress(0);
     setAiGeneratedText('');
@@ -460,7 +500,6 @@ export default function ExposeProfiLanding() {
     setIsUnlocked(false);
 
     try {
-      // Progress-Simulation
       const progressInterval = setInterval(() => {
         setGenerationProgress(prev => {
           if (prev >= 90) {
@@ -473,7 +512,6 @@ export default function ExposeProfiLanding() {
 
       console.log('📤 Sende Request mit', uploadedPhotos.length, 'Fotos...');
       
-      // Bereite Fotos vor (nur Base64)
       const photosBase64 = uploadedPhotos.map(p => p.base64);
       
       const response = await fetch('/api/generate', {
@@ -520,11 +558,26 @@ export default function ExposeProfiLanding() {
     }
   };
 
-  const handleUnlock = () => {
+  // KORRIGIERTE PAYWALL-LOGIK
+  const openPaymentModal = () => {
+    setShowPaymentModal(true);
+  };
+
+  const closePaymentModal = () => {
+    setShowPaymentModal(false);
+  };
+
+  const handlePaymentSuccess = () => {
+    // Hier würde die echte Bezahlung stattfinden
     setIsUnlocked(true);
+    setShowPaymentModal(false);
     setTimeout(() => {
       openBetaModal();
     }, 500);
+  };
+  // PDF-VORSCHAU ANZEIGEN
+  const handleShowPDFPreview = () => {
+    setShowPDFPreview(true);
   };
 
   // PDF-EXPORT FUNKTION
@@ -557,6 +610,228 @@ export default function ExposeProfiLanding() {
       } catch (error) {
         console.error('Logo konnte nicht eingefügt werden:', error);
       }
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(darkColor.r, darkColor.g, darkColor.b);
+
+    const rightX = pageWidth - margin;
+    const objectInfo = [
+      propertyData.objekttyp || 'Immobilie',
+      propertyData.ort ? `${propertyData.plz || ''} ${propertyData.ort}`.trim() : '',
+      propertyData.preis ? `${propertyData.vermarktungsart === 'Verkauf' ? 'Kaufpreis' : 'Kaltmiete'}: ${Number(propertyData.preis).toLocaleString('de-DE')} €` : ''
+    ].filter(Boolean);
+
+    objectInfo.forEach((line, index) => {
+      doc.text(line, rightX, yPos + (index * 6), { align: 'right' });
+    });
+
+    yPos += 35;
+
+    doc.setDrawColor(brandColor.r, brandColor.g, brandColor.b);
+    doc.setLineWidth(0.5);
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+    yPos += 10;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.setTextColor(darkColor.r, darkColor.g, darkColor.b);
+    
+    const headline = `${propertyData.objekttyp || 'Exklusive Immobilie'} in ${propertyData.ort || 'bester Lage'}`;
+    doc.text(headline, margin, yPos);
+    yPos += 12;
+
+    doc.setFillColor(250, 250, 250);
+    doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 20, 2, 2, 'F');
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(grayColor.r, grayColor.g, grayColor.b);
+    
+    const eckdaten = [
+      `${propertyData.wohnflaeche} m²`,
+      `${propertyData.zimmer} Zimmer`,
+      propertyData.baujahr ? `Baujahr ${propertyData.baujahr}` : null,
+      propertyData.zustand || null
+    ].filter(Boolean).join('  •  ');
+    
+    doc.text(eckdaten, margin + 5, yPos + 7);
+    
+    if (propertyData.effizienzklasse) {
+      const energieText = `Energie: Klasse ${propertyData.effizienzklasse}, ${propertyData.energiebedarf || '—'} kWh/(m²·a)`;
+      doc.text(energieText, margin + 5, yPos + 14);
+    }
+    
+    yPos += 28;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(50, 50, 50);
+    
+    const textWidth = pageWidth - 2 * margin;
+    const lines = doc.splitTextToSize(aiGeneratedText, textWidth);
+    
+    lines.forEach((line) => {
+      if (yPos > pageHeight - 60) {
+        doc.addPage();
+        yPos = margin;
+      }
+      doc.text(line, margin, yPos);
+      yPos += 5;
+    });
+
+    yPos += 10;
+
+    const allFeatures = [
+      ...propertyData.aussenbereich || [],
+      ...propertyData.innenraum || [],
+      ...propertyData.parkenKeller || [],
+      ...propertyData.technikKomfort || []
+    ];
+
+    if (allFeatures.length > 0) {
+      if (yPos > pageHeight - 80) {
+        doc.addPage();
+        yPos = margin;
+      }
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(darkColor.r, darkColor.g, darkColor.b);
+      doc.text('Ausstattung & Highlights', margin, yPos);
+      yPos += 8;
+
+      const featuresHeight = Math.ceil(allFeatures.length / 2) * 6 + 10;
+      doc.setFillColor(252, 249, 243);
+      doc.roundedRect(margin, yPos, pageWidth - 2 * margin, featuresHeight, 2, 2, 'F');
+      yPos += 7;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(60, 60, 60);
+
+      const columnWidth = (pageWidth - 2 * margin - 10) / 2;
+      let currentColumn = 0;
+      let columnYPos = yPos;
+
+      allFeatures.forEach((feature) => {
+        const xPos = margin + 5 + (currentColumn * (columnWidth + 10));
+        
+        doc.setTextColor(brandColor.r, brandColor.g, brandColor.b);
+        doc.setFont('helvetica', 'bold');
+        doc.text('✓', xPos, columnYPos);
+        
+        doc.setTextColor(60, 60, 60);
+        doc.setFont('helvetica', 'normal');
+        doc.text(feature, xPos + 5, columnYPos);
+        
+        currentColumn++;
+        if (currentColumn >= 2) {
+          currentColumn = 0;
+          columnYPos += 6;
+        }
+      });
+    }
+
+    const addFooter = () => {
+      const footerY = pageHeight - 15;
+      doc.setDrawColor(brandColor.r, brandColor.g, brandColor.b);
+      doc.setLineWidth(0.3);
+      doc.line(margin, footerY - 5, pageWidth - margin, footerY - 5);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(grayColor.r, grayColor.g, grayColor.b);
+      
+      const footerText = 'Erstellt mit Exposé-Profi  •  www.expose-profi.de';
+      doc.text(footerText, pageWidth / 2, footerY, { align: 'center' });
+    };
+
+    const totalPages = doc.internal.pages.length - 1;
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      addFooter();
+    }
+
+    const fileName = `Expose_${propertyData.objekttyp || 'Immobilie'}_${propertyData.ort || 'Objekt'}_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+    
+    console.log('✅ PDF erfolgreich erstellt:', fileName);
+  };
+
+  const getTeaserText = () => {
+    if (isUnlocked) {
+      return aiGeneratedText;
+    }
+    
+    if (aiGeneratedText.length <= 200) {
+      return aiGeneratedText;
+    }
+    
+    return aiGeneratedText.substring(0, 200);
+  };
+
+  const getBlurredText = () => {
+    if (isUnlocked || aiGeneratedText.length <= 200) {
+      return '';
+    }
+    
+    return aiGeneratedText.substring(200);
+  };
+
+  const openLegalModal = (type) => {
+    setLegalContent(type);
+  };
+
+  const closeLegalModal = () => {
+    setLegalContent(null);
+  };
+
+  const openBetaModal = () => {
+    setShowBetaModal(true);
+    setBetaSubmitted(false);
+    setBetaEmail('');
+  };
+
+  const closeBetaModal = () => {
+    setShowBetaModal(false);
+    setBetaEmail('');
+    setBetaSubmitted(false);
+  };
+
+  const handleBetaSubmit = (e) => {
+    e.preventDefault();
+    if (betaEmail && betaEmail.includes('@')) {
+      console.log('Beta signup:', betaEmail);
+      setBetaSubmitted(true);
+      setTimeout(() => {
+        closeBetaModal();
+      }, 3000);
+    }
+  };
+
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') {
+        if (legalContent) closeLegalModal();
+        if (showBetaModal) closeBetaModal();
+        if (showPaymentModal) closePaymentModal();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [legalContent, showBetaModal, showPaymentModal]);
+
+  useEffect(() => {
+    return () => {
+      uploadedPhotos.forEach(photo => {
+        if (photo.preview) URL.revokeObjectURL(photo.preview);
+      });
+      if (uploadedLogo?.preview) URL.revokeObjectURL(uploadedLogo.preview);
+    };
+  }, []);
     }
 
     doc.setFont('helvetica', 'bold');
@@ -1328,7 +1603,7 @@ export default function ExposeProfiLanding() {
                           Schalten Sie das vollständige Exposé frei.
                         </p>
                         <button
-                          onClick={handleUnlock}
+                          onClick={openPaymentModal}
                           className="bg-gradient-to-r from-[#C5A059] to-[#A68B4A] hover:from-[#B39050] hover:to-[#957A3F] text-white px-8 py-3 rounded-lg font-bold transition-all transform hover:scale-105 shadow-lg flex items-center space-x-2 mx-auto"
                         >
                           <Unlock className="w-5 h-5" />
@@ -1597,6 +1872,66 @@ export default function ExposeProfiLanding() {
                 </p>
               </div>
             )}
+          </div>
+        </div>
+
+      {/* PAYMENT MODAL (KORRIGIERTE PAYWALL) */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={closePaymentModal}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 relative" onClick={(e) => e.stopPropagation()}>
+            <button onClick={closePaymentModal} className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors">
+              <X className="w-5 h-5 text-gray-600" />
+            </button>
+
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-[#C5A059] to-[#A68B4A] rounded-full flex items-center justify-center mx-auto mb-4">
+                <CreditCard className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-[#0A192F] mb-2">Vollversion freischalten</h3>
+              <p className="text-gray-600 mb-4">
+                Erhalten Sie Zugriff auf den kompletten Text und alle Export-Funktionen.
+              </p>
+              <div className="bg-[#C5A059]/10 border border-[#C5A059]/30 rounded-lg p-4 mb-6">
+                <div className="text-3xl font-bold text-[#0A192F] mb-1">29€</div>
+                <div className="text-sm text-gray-600">einmalig pro Exposé</div>
+              </div>
+            </div>
+
+            <div className="space-y-3 mb-6">
+              <div className="flex items-center space-x-2 text-sm text-gray-700">
+                <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
+                <span>Vollständiger KI-generierter Text</span>
+              </div>
+              <div className="flex items-center space-x-2 text-sm text-gray-700">
+                <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
+                <span>Text-Bearbeitung möglich</span>
+              </div>
+              <div className="flex items-center space-x-2 text-sm text-gray-700">
+                <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
+                <span>PDF-Export mit Ihrem Logo</span>
+              </div>
+              <div className="flex items-center space-x-2 text-sm text-gray-700">
+                <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
+                <span>GEG-konforme Pflichtangaben</span>
+              </div>
+            </div>
+
+            <button
+              onClick={handlePaymentSuccess}
+              className="w-full bg-gradient-to-r from-[#C5A059] to-[#A68B4A] hover:from-[#B39050] hover:to-[#957A3F] text-white py-4 rounded-lg font-bold transition-all transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2"
+            >
+              <CreditCard className="w-5 h-5" />
+              <span>Jetzt freischalten (Demo)</span>
+            </button>
+            
+            <p className="text-xs text-gray-500 text-center mt-4">
+              Demo-Modus: Klicken simuliert erfolgreiche Zahlung
+            </p>
+          </div>
+        </div>
+      )}
+              Demo-Modus: Klicken simuliert erfolgreiche Zahlung
+            </p>
           </div>
         </div>
       )}
