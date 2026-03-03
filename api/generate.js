@@ -1,5 +1,5 @@
 // api/generate.js
-// KOMPLETT FERTIGE VERSION - Vision + OCR
+// KORRIGIERTE VERSION - Keine Fantasie, keine Labels, strikte Datennutzung
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -27,12 +27,10 @@ export default async function handler(req, res) {
 
     const { propertyData, photos, energyCertificate, mode } = req.body;
     
-    // Mode 1: OCR für Energieausweis
     if (mode === 'ocr' && energyCertificate) {
       return await handleEnergyOCR(apiKey, energyCertificate, res);
     }
     
-    // Mode 2: Vollständige Exposé-Generierung
     if (!propertyData) {
       return res.status(400).json({ 
         success: false,
@@ -225,12 +223,41 @@ ${hasPhotos ? `Du hast Zugriff auf Fotos der Immobilie. Analysiere sie aktiv und
 
 WICHTIG: Nutze nur Details, die du auf den Bildern WIRKLICH siehst. Keine Fantasie!` : ''}
 
-KRITISCHE REGEL: Nutze NUR bereitgestellte Informationen!
-- Fehlende Daten → Platzhalter: [WERT PRÜFEN]
-- Erfinde NICHTS
-- Keine Vermutungen
+ABSOLUTE REGELN - NIEMALS VERLETZEN:
 
-Schreibe verkaufsstark, emotional und professionell auf Deutsch.`
+1. STRIKTE DATENNUTZUNG:
+   - Nutze Ort und PLZ EXAKT wie angegeben
+   - Verändere KEINEN Buchstaben an Eigennamen
+   - Erfinde KEINE Straßennamen oder Stadtteilnamen
+   - Bei fehlenden Daten: Platzhalter [WERT PRÜFEN]
+
+2. KEINE STRUKTUR-LABELS IM TEXT:
+   - Schreibe NIEMALS Wörter wie: "Überschrift:", "Einleitung:", "Fazit:", "Call-to-Action:", "Lage:", "Ausstattung:" etc.
+   - Der Text muss ein FLÜSSIGES Exposé sein, OHNE Meta-Bezeichnungen
+   - Beginne direkt mit dem Inhalt, nicht mit Labels
+
+3. STIL - SACHLICH-ELEGANT:
+   - Keine Floskeln wie "Zögern Sie nicht länger", "Lassen Sie sich diese Gelegenheit nicht entgehen"
+   - Keine übertriebenen Superlativen
+   - Sachlich, präzise, verkaufsstark
+   - Professionell ohne Marktschreier-Ton
+
+4. STRUKTUR (OHNE LABELS):
+   - Eröffnungssatz (direkt, ohne "Einleitung:")
+   - Objektbeschreibung (fließend)
+   - Lagebeschreibung (fließend)
+   - Ausstattungsdetails (natürlich integriert)
+   - Abschlusssatz mit Kontaktmöglichkeit (ohne "Fazit:")
+
+BEISPIEL RICHTIG:
+"Diese moderne 3-Zimmer-Wohnung in Müllheim überzeugt durch ihre hochwertige Ausstattung und zentrale Lage. Die 85 m² Wohnfläche verteilen sich..."
+
+BEISPIEL FALSCH:
+"Überschrift: Moderne Wohnung in Müllheim
+Einleitung: Diese Wohnung...
+Fazit: Kontaktieren Sie uns..."
+
+Schreibe NUR den fertigen Text, OHNE Meta-Struktur!`
   };
 
   const userContent = [];
@@ -272,11 +299,12 @@ function createDetailedPrompt(data, hasPhotos) {
   const plz = data.plz || '';
   const ort = data.ort || '';
   
+  // EXAKTE Übernahme von PLZ und Ort
   let lageInfo = '';
   if (plz && ort) {
-    lageInfo = `PLZ ${plz} in ${ort}`;
+    lageInfo = `${ort} (PLZ ${plz})`;
   } else if (ort) {
-    lageInfo = `in ${ort}`;
+    lageInfo = ort;
   } else if (plz) {
     lageInfo = `PLZ ${plz}`;
   } else {
@@ -298,10 +326,10 @@ function createDetailedPrompt(data, hasPhotos) {
     ? `Energieeffizienzklasse: ${data.effizienzklasse}\nEnergiebedarf: ${data.energiebedarf || '[WERT PRÜFEN]'} kWh/(m²·a)\nEnergieträger: ${data.energietraeger || '[TRÄGER PRÜFEN]'}`
     : '[ENERGIEAUSWEIS PRÜFEN - GEG-PFLICHT!]';
 
-  return `${hasPhotos ? '🖼️ ICH HABE DIR FOTOS DER IMMOBILIE MITGESCHICKT - ANALYSIERE SIE GENAU!\n\n' : ''}Erstelle ein professionelles Immobilien-Exposé mit folgenden EXAKTEN Daten:
+  return `${hasPhotos ? '🖼️ ICH HABE DIR FOTOS MITGESCHICKT - ANALYSIERE SIE GENAU!\n\n' : ''}Erstelle ein professionelles Immobilien-Exposé mit folgenden EXAKTEN Daten:
 
 ═══════════════════════════════════════
-OBJEKTDATEN
+OBJEKTDATEN (EXAKT ÜBERNEHMEN!)
 ═══════════════════════════════════════
 
 Objekttyp: ${objekttyp}
@@ -312,8 +340,11 @@ Baujahr: ${baujahr}
 Zustand: ${zustand}
 ${vermarktungsart === 'Verkauf' ? 'Kaufpreis' : 'Kaltmiete'}: ${preis}${preis !== '[PREIS PRÜFEN]' ? ' €' : ''}
 
-LAGE:
+LAGE (EXAKT SO VERWENDEN!):
 ${lageInfo}
+⚠️ WICHTIG: Verändere KEINEN Buchstaben am Ortsnamen!
+⚠️ Erfinde KEINE Straßennamen oder Stadtteilnamen!
+⚠️ Nutze nur: "${lageInfo}" - sonst nichts!
 
 AUSSTATTUNG:
 ${ausstattungText}
@@ -324,41 +355,60 @@ ${energieInfo}
 ${data.weiteresBesonderheiten ? `WEITERE BESONDERHEITEN:\n${data.weiteresBesonderheiten}` : ''}
 
 ${hasPhotos ? `═══════════════════════════════════════
-📸 BILDANALYSE-AUFGABE
+📸 BILDANALYSE
 ═══════════════════════════════════════
 
-Du hast ${data.uploadedPhotosCount || 'mehrere'} Foto(s) erhalten.
+Du hast ${data.uploadedPhotosCount || 'mehrere'} Foto(s).
 
-ANALYSIERE AKTIV:
-1. Materialien (Parkett, Fliesen, Marmor, etc.)
-2. Lichteinfall und Helligkeit
-3. Raumwirkung und Größe
-4. Ausstattungsqualität
-5. Besondere Details (Stuck, Balken, etc.)
-
-INTEGRIERE diese Beobachtungen natürlich in den Text!
+ANALYSIERE: Materialien, Licht, Raumwirkung, Ausstattung, besondere Details.
+INTEGRIERE diese Beobachtungen NATÜRLICH in den Text!
 
 ` : ''}═══════════════════════════════════════
-AUFGABE
+AUFGABE - FLÜSSIGES EXPOSÉ SCHREIBEN
 ═══════════════════════════════════════
 
-Schreibe ein verkaufsstarkes Exposé mit dieser STRUKTUR:
+Schreibe ein verkaufsstarkes Exposé MIT DIESER STRUKTUR (aber OHNE die Labels im Text!):
 
-1. ÜBERSCHRIFT (1 Zeile)
-2. EINLEITUNG (2-3 Sätze)
-${hasPhotos ? '   - Beziehe Bildeindrücke ein!' : ''}
-3. OBJEKTBESCHREIBUNG (4-5 Sätze)
-${hasPhotos ? '   - Beschreibe was du auf den Bildern siehst' : ''}
-4. LAGE (3-4 Sätze)
-5. AUSSTATTUNG & HIGHLIGHTS
-6. ENERGETISCHE DATEN
-7. PREIS & KONDITIONEN
-8. FAZIT & CALL-TO-ACTION (2 Sätze)
+1. Eröffnungssatz
+   - Beginne direkt, sachlich-elegant
+   - Erwähne Objekttyp, Lage (EXAKT: "${lageInfo}"), Größe
 
-✓ Nutze NUR bereitgestellte Daten + Bildinhalte
-✓ Platzhalter für fehlende Infos
-✓ Professionell und verkaufsstark
+2. Objektbeschreibung
+   - Räume, Wohngefühl
+   ${hasPhotos ? '- Beschreibe was du auf Bildern siehst (Materialien, Licht)' : ''}
+   - Fließend, ohne "Objektbeschreibung:" zu schreiben!
+
+3. Lage-Information
+   - Nutze NUR: "${lageInfo}"
+   - Beschreibe Vorzüge allgemein (Infrastruktur, Anbindung)
+   - KEINE erfundenen Straßennamen!
+
+4. Ausstattung
+   - Integriere Features natürlich
+   - Keine Aufzählungen mit "Ausstattung:" davor!
+
+5. Energiedaten
+   - Erwähne Werte sachlich
+   - Ohne "Energiedaten:" Label!
+
+6. Preis & Kontakt
+   - Preis nennen
+   - Einladung zur Besichtigung
+   - OHNE "Fazit:" oder "Call-to-Action:" Label!
+
+═══════════════════════════════════════
+ABSOLUTE VERBOTE
+═══════════════════════════════════════
+
+❌ NIEMALS schreiben: "Überschrift:", "Einleitung:", "Fazit:", "Call-to-Action:", "Lage:", "Ausstattung:"
+❌ NIEMALS Floskeln: "Zögern Sie nicht", "Lassen Sie sich diese Gelegenheit nicht entgehen"
+❌ NIEMALS Ortsnamen verändern oder erfinden
+❌ NIEMALS Straßennamen oder Stadtteile erfinden
+
+✓ Schreibe ein FLÜSSIGES, elegantes Exposé
+✓ Sachlich-verkaufsstark, ohne Marktschreier-Ton
+✓ EXAKTE Datennutzung
 ✓ Ca. 400-500 Wörter
 
-Beginne jetzt:`;
+Beginne JETZT mit dem fertigen Exposé-Text (OHNE Meta-Labels!):`;
 }
