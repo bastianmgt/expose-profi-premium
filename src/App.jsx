@@ -1206,24 +1206,80 @@ export default function ExposeProfiLanding() {
 
                 <div className="border-t border-gray-200 pt-5"></div>
 
-                {/* Ausstattung */}
+                {/* Ausstattung - ALLE Features in Kategorien */}
                 <div>
-                  <label className="block text-sm font-semibold text-[#0A192F] mb-3">Ausstattung</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[...featureCategories.aussenbereich, ...featureCategories.innenraum].slice(0, 8).map((feature) => {
-                      const category = featureCategories.aussenbereich.includes(feature) ? 'aussenbereich' : 'innenraum';
-                      return (
+                  <label className="block text-sm font-semibold text-[#0A192F] mb-4">Ausstattung & Komfort</label>
+                  
+                  {/* Außenbereich */}
+                  <div className="mb-4">
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Außenbereich</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      {featureCategories.aussenbereich.map((feature) => (
                         <label key={feature} className="flex items-center space-x-2 cursor-pointer text-sm">
                           <input
                             type="checkbox"
-                            checked={propertyData[category].includes(feature)}
-                            onChange={() => toggleFeature(category, feature)}
+                            checked={propertyData.aussenbereich.includes(feature)}
+                            onChange={() => toggleFeature('aussenbereich', feature)}
                             className="w-4 h-4 text-[#C5A059] border-gray-300 rounded focus:ring-[#C5A059]"
                           />
                           <span className="text-gray-700">{feature}</span>
                         </label>
-                      );
-                    })}
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Innenraum */}
+                  <div className="mb-4">
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Innenraum</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      {featureCategories.innenraum.map((feature) => (
+                        <label key={feature} className="flex items-center space-x-2 cursor-pointer text-sm">
+                          <input
+                            type="checkbox"
+                            checked={propertyData.innenraum.includes(feature)}
+                            onChange={() => toggleFeature('innenraum', feature)}
+                            className="w-4 h-4 text-[#C5A059] border-gray-300 rounded focus:ring-[#C5A059]"
+                          />
+                          <span className="text-gray-700">{feature}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Parken & Keller */}
+                  <div className="mb-4">
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Parken & Keller</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      {featureCategories.parkenKeller.map((feature) => (
+                        <label key={feature} className="flex items-center space-x-2 cursor-pointer text-sm">
+                          <input
+                            type="checkbox"
+                            checked={propertyData.parkenKeller.includes(feature)}
+                            onChange={() => toggleFeature('parkenKeller', feature)}
+                            className="w-4 h-4 text-[#C5A059] border-gray-300 rounded focus:ring-[#C5A059]"
+                          />
+                          <span className="text-gray-700">{feature}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Technik & Komfort */}
+                  <div>
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Technik & Komfort</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      {featureCategories.technikKomfort.map((feature) => (
+                        <label key={feature} className="flex items-center space-x-2 cursor-pointer text-sm">
+                          <input
+                            type="checkbox"
+                            checked={propertyData.technikKomfort.includes(feature)}
+                            onChange={() => toggleFeature('technikKomfort', feature)}
+                            className="w-4 h-4 text-[#C5A059] border-gray-300 rounded focus:ring-[#C5A059]"
+                          />
+                          <span className="text-gray-700">{feature}</span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
