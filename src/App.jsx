@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Clock, 
   TrendingUp, 
@@ -20,7 +20,8 @@ import {
   Euro,
   Key,
   Lock,
-  Unlock
+  Unlock,
+  Loader2
 } from 'lucide-react';
 
 export default function ExposeProfiLanding() {
@@ -29,13 +30,23 @@ export default function ExposeProfiLanding() {
   const [uploadedPhotos, setUploadedPhotos] = useState([]);
   const [uploadedFloorPlans, setUploadedFloorPlans] = useState([]);
   const [uploadedLogo, setUploadedLogo] = useState(null);
+  const [uploadedEnergyCert, setUploadedEnergyCert] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const [aiGeneratedText, setAiGeneratedText] = useState('');
   const [legalContent, setLegalContent] = useState(null);
   const [showBetaModal, setShowBetaModal] = useState(false);
   const [betaEmail, setBetaEmail] = useState('');
   const [betaSubmitted, setBetaSubmitted] = useState(false);
-  const [isUnlocked, setIsUnlocked] = useState(false); // TEASER-STATE
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  
+  const photoInputRef = useRef(null);
+  const logoInputRef = useRef(null);
+  const floorPlanInputRef = useRef(null);
+  const energyInputRef = useRef(null);
+  const dropZoneRef = useRef(null);
   
   const [propertyData, setPropertyData] = useState({
     objekttyp: '',
@@ -83,10 +94,6 @@ export default function ExposeProfiLanding() {
         {
           heading: 'Kontakt',
           content: 'E-Mail: info@expose-profi.de'
-        },
-        {
-          heading: 'Umsatzsteuer-ID',
-          content: 'Kleinunternehmer gemäß § 19 UStG. Es wird keine Umsatzsteuer ausgewiesen.'
         }
       ]
     },
@@ -95,7 +102,7 @@ export default function ExposeProfiLanding() {
       sections: [
         {
           heading: '1. Datenschutz auf einen Blick',
-          content: 'Die folgenden Hinweise geben einen einfachen Überblick darüber, was mit Ihren personenbezogenen Daten passiert, wenn Sie diese Website besuchen.'
+          content: 'Die folgenden Hinweise geben einen einfachen Überblick.'
         }
       ]
     },
@@ -104,20 +111,22 @@ export default function ExposeProfiLanding() {
       sections: [
         {
           heading: 'Widerrufsrecht',
-          content: 'Sie haben das Recht, binnen vierzehn Tagen ohne Angabe von Gründen diesen Vertrag zu widerrufen.'
+          content: 'Sie haben das Recht, binnen vierzehn Tagen diesen Vertrag zu widerrufen.'
         }
       ]
     },
     agb: {
-      title: 'Allgemeine Geschäftsbedingungen',
+      title: 'AGB',
       sections: [
         {
           heading: '§ 1 Geltungsbereich',
-          content: 'Diese Allgemeinen Geschäftsbedingungen gelten für alle Verträge über die Erstellung von Immobilien-Exposés.'
+          content: 'Diese AGB gelten für alle Verträge.'
         }
       ]
     }
   };
+
+  // HILFSFUNKTIONEN
 
   const isFormValid = () => {
     return propertyData.wohnflaeche.trim() !== '' && 
@@ -156,6 +165,388 @@ export default function ExposeProfiLanding() {
     }));
   };
 
+  // DATEI-KOMPRIMIERUNG
+  const compressImage = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        const img = new window.Image();
+        
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // Resize wenn zu groß
+          const MAX_WIDTH = 1024;
+          const MAX_HEIGHT = 1024;
+          
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Convert to base64 (JPEG, 80% quality)
+          const base64 = canvas.toDataURL('image/jpeg', 0.8);
+          resolve(base64);
+        };
+        
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // FOTO-UPLOAD
+  const handlePhotoUpload = async (files) => {
+    const fileArray = Array.from(files);
+    const imageFiles = fileArray.filter(f => f.type.startsWith('image/'));
+    
+    if (imageFiles.length === 0) {
+      alert('Bitte nur Bilddateien auswählen (JPG, PNG)');
+      return;
+    }
+    
+    // Limit: 20 Fotos total
+    const remaining = 20 - uploadedPhotos.length;
+    const toProcess = imageFiles.slice(0, remaining);
+    
+    try {
+      const compressedPhotos = [];
+      
+      for (const file of toProcess) {
+        const base64 = await compressImage(file);
+        const preview = URL.createObjectURL(file);
+        
+        compressedPhotos.push({
+          id: Date.now() + Math.random(),
+          name: file.name,
+          preview: preview,
+          base64: base64,
+          size: file.size
+        });
+      }
+      
+      setUploadedPhotos(prev => [...prev, ...compressedPhotos]);
+      
+      if (toProcess.length < imageFiles.length) {
+        alert(`Nur ${toProcess.length} von ${imageFiles.length} Fotos hinzugefügt (Maximum 20 erreicht)`);
+      }
+    } catch (error) {
+      console.error('Fehler beim Komprimieren:', error);
+      alert('Fehler beim Verarbeiten der Bilder');
+    }
+  };
+
+  // LOGO-UPLOAD
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('image/')) {
+      alert('Bitte nur Bilddateien auswählen');
+      return;
+    }
+    
+    try {
+      const base64 = await compressImage(file);
+      const preview = URL.createObjectURL(file);
+      
+      setUploadedLogo({
+        id: Date.now(),
+        name: file.name,
+        preview: preview,
+        base64: base64
+      });
+    } catch (error) {
+      console.error('Fehler beim Logo-Upload:', error);
+      alert('Fehler beim Verarbeiten des Logos');
+    }
+  };
+
+  // GRUNDRISS-UPLOAD
+  const handleFloorPlanUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    
+    try {
+      const newPlans = [];
+      
+      for (const file of files) {
+        let base64;
+        
+        if (file.type.startsWith('image/')) {
+          base64 = await compressImage(file);
+        } else if (file.type === 'application/pdf') {
+          // PDF zu Base64
+          base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+        } else {
+          continue;
+        }
+        
+        newPlans.push({
+          id: Date.now() + Math.random(),
+          name: file.name,
+          base64: base64,
+          type: file.type
+        });
+      }
+      
+      setUploadedFloorPlans(prev => [...prev, ...newPlans]);
+    } catch (error) {
+      console.error('Fehler beim Grundriss-Upload:', error);
+      alert('Fehler beim Verarbeiten der Grundrisse');
+    }
+  };
+
+  // ENERGIEAUSWEIS-UPLOAD MIT OCR
+  const handleEnergyUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
+      alert('Bitte nur Bild- oder PDF-Dateien auswählen');
+      return;
+    }
+    
+    setEnergyUploadStatus('uploading');
+    
+    try {
+      let base64;
+      
+      if (file.type.startsWith('image/')) {
+        base64 = await compressImage(file);
+      } else {
+        // PDF zu Base64
+        base64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+      
+      setUploadedEnergyCert({
+        id: Date.now(),
+        name: file.name,
+        base64: base64
+      });
+      
+      // OCR durchführen
+      setEnergyUploadStatus('extracting');
+      
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          mode: 'ocr',
+          energyCertificate: base64
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        // Befülle States mit OCR-Daten
+        setPropertyData(prev => ({
+          ...prev,
+          effizienzklasse: data.data.effizienzklasse || '',
+          energiebedarf: data.data.energiebedarf || '',
+          energietraeger: data.data.energietraeger || '',
+          ausweistyp: data.data.ausweistyp || ''
+        }));
+        
+        setEnergyUploadStatus('complete');
+      } else {
+        throw new Error('OCR fehlgeschlagen');
+      }
+      
+    } catch (error) {
+      console.error('Fehler beim Energieausweis:', error);
+      setEnergyUploadStatus('error');
+      alert('Fehler beim Extrahieren der Energiedaten. Bitte geben Sie die Werte manuell ein.');
+      
+      setTimeout(() => {
+        setEnergyUploadStatus('idle');
+      }, 3000);
+    }
+  };
+
+  // DRAG & DROP
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      handlePhotoUpload(files);
+    }
+  };
+
+  // FOTO ENTFERNEN
+  const removePhoto = (id) => {
+    setUploadedPhotos(prev => {
+      const photo = prev.find(p => p.id === id);
+      if (photo?.preview) {
+        URL.revokeObjectURL(photo.preview);
+      }
+      return prev.filter(p => p.id !== id);
+    });
+  };
+
+  const removeFloorPlan = (id) => {
+    setUploadedFloorPlans(prev => prev.filter(p => p.id !== id));
+  };
+
+  const removeLogo = () => {
+    if (uploadedLogo?.preview) {
+      URL.revokeObjectURL(uploadedLogo.preview);
+    }
+    setUploadedLogo(null);
+  };
+
+  // EXPOSÉ GENERIEREN MIT VISION
+  const handleGenerateExpose = async () => {
+    if (!isFormValid()) {
+      return;
+    }
+
+    setShowPreview(false);
+    setIsGenerating(true);
+    setGenerationProgress(0);
+    setAiGeneratedText('');
+    setShowPreview(true);
+    setIsUnlocked(false);
+
+    try {
+      // Progress-Simulation
+      const progressInterval = setInterval(() => {
+        setGenerationProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 300);
+
+      console.log('📤 Sende Request mit', uploadedPhotos.length, 'Fotos...');
+      
+      // Bereite Fotos vor (nur Base64)
+      const photosBase64 = uploadedPhotos.map(p => p.base64);
+      
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          propertyData: {
+            ...propertyData,
+            uploadedPhotosCount: uploadedPhotos.length
+          },
+          photos: photosBase64,
+          mode: 'generate'
+        })
+      });
+
+      clearInterval(progressInterval);
+      setGenerationProgress(100);
+
+      const data = await response.json();
+      console.log('📊 Response:', data);
+
+      if (!response.ok) {
+        console.error('❌ API-Fehler:', data);
+        setAiGeneratedText(`❌ Fehler: ${data.message || data.error || 'Unbekannter Fehler'}`);
+        setIsGenerating(false);
+        return;
+      }
+
+      if (data.success && data.text) {
+        console.log('✅ Exposé generiert mit', data.analyzedImages, 'analysierten Bildern');
+        setAiGeneratedText(data.text);
+      } else {
+        setAiGeneratedText('❌ Fehler: Kein Text erhalten');
+      }
+
+    } catch (error) {
+      console.error('❌ Netzwerk-Fehler:', error);
+      setAiGeneratedText(`❌ Verbindungsfehler\n\nDetails: ${error.message}`);
+    } finally {
+      setIsGenerating(false);
+      setGenerationProgress(0);
+    }
+  };
+
+  const handleUnlock = () => {
+    setIsUnlocked(true);
+    setTimeout(() => {
+      openBetaModal();
+    }, 500);
+  };
+
+  const getTeaserText = () => {
+    if (isUnlocked) {
+      return aiGeneratedText;
+    }
+    
+    if (aiGeneratedText.length <= 200) {
+      return aiGeneratedText;
+    }
+    
+    return aiGeneratedText.substring(0, 200);
+  };
+
+  const getBlurredText = () => {
+    if (isUnlocked || aiGeneratedText.length <= 200) {
+      return '';
+    }
+    
+    return aiGeneratedText.substring(200);
+  };
+
   const openLegalModal = (type) => {
     setLegalContent(type);
   };
@@ -187,131 +578,6 @@ export default function ExposeProfiLanding() {
     }
   };
 
-  const handleUnlock = () => {
-    setIsUnlocked(true);
-    // Hier würde normalerweise die Bezahlung/Freischaltung stattfinden
-    setTimeout(() => {
-      openBetaModal();
-    }, 500);
-  };
-
-  const handleEnergyUpload = () => {
-    setEnergyUploadStatus('uploading');
-    setTimeout(() => {
-      setEnergyUploadStatus('extracting');
-      setTimeout(() => {
-        setEnergyUploadStatus('complete');
-        setPropertyData(prev => ({
-          ...prev,
-          ausweistyp: 'Bedarfsausweis',
-          energiebedarf: '85',
-          energietraeger: 'Gas',
-          effizienzklasse: 'C'
-        }));
-      }, 2000);
-    }, 1000);
-  };
-
-  const handlePhotoUpload = () => {
-    const newPhotos = Array.from({ length: 5 }, (_, i) => ({
-      id: Date.now() + i,
-      url: `photo-${i}`
-    }));
-    setUploadedPhotos(prev => [...prev, ...newPhotos].slice(0, 20));
-  };
-
-  const handleFloorPlanUpload = () => {
-    const newPlan = {
-      id: Date.now(),
-      name: `Grundriss_${uploadedFloorPlans.length + 1}.pdf`
-    };
-    setUploadedFloorPlans(prev => [...prev, newPlan]);
-  };
-
-  const handleLogoUpload = () => {
-    setUploadedLogo({
-      id: Date.now(),
-      name: 'Ihr_Logo.png'
-    });
-  };
-
-  const removePhoto = (id) => {
-    setUploadedPhotos(prev => prev.filter(p => p.id !== id));
-  };
-
-  const removeFloorPlan = (id) => {
-    setUploadedFloorPlans(prev => prev.filter(p => p.id !== id));
-  };
-
-  const handleGenerateExpose = async () => {
-    if (!isFormValid()) {
-      return;
-    }
-
-    setShowPreview(false);
-    setAiGeneratedText('⏳ KI generiert Ihr Exposé...\n\nBitte warten Sie einen Moment.');
-    setShowPreview(true);
-    setIsUnlocked(false); // Reset unlock status
-
-    try {
-      console.log('📤 Sende Request...');
-      
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          propertyData: propertyData
-        })
-      });
-
-      console.log('📥 Response Status:', response.status);
-
-      const data = await response.json();
-      console.log('📊 Data:', data);
-
-      if (!response.ok) {
-        console.error('❌ API-Fehler:', data);
-        setAiGeneratedText(`❌ Fehler: ${data.message || data.error || 'Unbekannter Fehler'}`);
-        return;
-      }
-
-      if (data.success && data.text) {
-        console.log('✅ Exposé generiert!');
-        setAiGeneratedText(data.text);
-      } else {
-        setAiGeneratedText('❌ Fehler: Kein Text erhalten');
-      }
-
-    } catch (error) {
-      console.error('❌ Netzwerk-Fehler:', error);
-      setAiGeneratedText(`❌ Verbindungsfehler\n\nDetails: ${error.message}`);
-    }
-  };
-
-  // TEASER-FUNKTION: Text aufteilen
-  const getTeaserText = () => {
-    if (isUnlocked) {
-      return aiGeneratedText;
-    }
-    
-    // Erste 200 Zeichen als Teaser
-    if (aiGeneratedText.length <= 200) {
-      return aiGeneratedText;
-    }
-    
-    return aiGeneratedText.substring(0, 200);
-  };
-
-  const getBlurredText = () => {
-    if (isUnlocked || aiGeneratedText.length <= 200) {
-      return '';
-    }
-    
-    return aiGeneratedText.substring(200);
-  };
-
   useEffect(() => {
     const handleEscape = (e) => {
       if (e.key === 'Escape') {
@@ -323,6 +589,16 @@ export default function ExposeProfiLanding() {
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
   }, [legalContent, showBetaModal]);
+
+  // Cleanup URLs on unmount
+  useEffect(() => {
+    return () => {
+      uploadedPhotos.forEach(photo => {
+        if (photo.preview) URL.revokeObjectURL(photo.preview);
+      });
+      if (uploadedLogo?.preview) URL.revokeObjectURL(uploadedLogo.preview);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
@@ -343,9 +619,6 @@ export default function ExposeProfiLanding() {
             <button onClick={() => scrollToSection('preise')} className="text-gray-300 hover:text-[#C5A059] transition-colors font-medium">
               Preise
             </button>
-            <button onClick={() => scrollToSection('kontakt')} className="text-gray-300 hover:text-[#C5A059] transition-colors font-medium">
-              Kontakt
-            </button>
             <button onClick={openBetaModal} className="bg-[#C5A059] hover:bg-[#B39050] text-white px-6 py-2 rounded-lg font-semibold transition-all">
               Beta-Zugang
             </button>
@@ -360,17 +633,14 @@ export default function ExposeProfiLanding() {
           <div className="absolute bottom-0 right-0 w-96 h-96 bg-[#C5A059] rounded-full filter blur-3xl"></div>
         </div>
         <div className="max-w-6xl mx-auto px-6 text-center relative z-10">
-          <div className="inline-block mb-6 px-4 py-2 bg-[#C5A059]/20 border border-[#C5A059]/40 rounded-full">
-            <span className="text-[#C5A059] text-sm font-semibold">KI-gestützte Exposé-Erstellung</span>
-          </div>
           <h1 className="text-5xl md:text-7xl font-bold mb-8 leading-tight">
             Exposés auf Knopfdruck –<br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#C5A059] to-[#D4B068]">
-              In Ihrer Corporate Identity
+              Mit KI-Bildanalyse
             </span>
           </h1>
           <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-3xl mx-auto leading-relaxed">
-            Professionelle Immobilien-Exposés in Sekunden. Mit Ihrem Logo, Ihren Farben, Ihrer Marke.
+            Die KI analysiert Ihre Fotos und erstellt verkaufsstarke Texte mit konkreten Details.
           </p>
           <button onClick={() => scrollToSection('generator')} className="bg-[#C5A059] hover:bg-[#B39050] text-white px-10 py-4 rounded-lg text-lg font-semibold transition-all transform hover:scale-105 shadow-2xl">
             Jetzt kostenlos testen
@@ -383,63 +653,111 @@ export default function ExposeProfiLanding() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-12">
             <h2 className="text-4xl md:text-5xl font-bold text-[#0A192F] mb-4">Erstellen Sie Ihr erstes Exposé</h2>
-            <p className="text-xl text-gray-600">Kostenlos testen – ohne Anmeldung</p>
+            <p className="text-xl text-gray-600">KI analysiert Ihre Fotos automatisch</p>
           </div>
           
           <div className="grid lg:grid-cols-2 gap-10">
             {/* Left - Uploads */}
             <div className="space-y-6">
+              {/* Logo Upload */}
               <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
                 <div className="flex items-center space-x-2 mb-4">
                   <Palette className="w-5 h-5 text-[#C5A059]" />
-                  <h3 className="text-lg font-bold text-[#0A192F]">White-Label Branding</h3>
+                  <h3 className="text-lg font-bold text-[#0A192F]">Ihr Logo (optional)</h3>
                 </div>
-                <div className="border-2 border-dashed border-[#C5A059]/50 rounded-xl p-6 hover:border-[#C5A059] transition-colors cursor-pointer">
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  className="hidden"
+                />
+                <div 
+                  onClick={() => logoInputRef.current?.click()}
+                  className="border-2 border-dashed border-[#C5A059]/50 rounded-xl p-6 hover:border-[#C5A059] transition-colors cursor-pointer"
+                >
                   <div className="text-center">
-                    <div className="w-16 h-16 bg-gradient-to-br from-[#C5A059]/20 to-[#C5A059]/10 rounded-xl flex items-center justify-center mx-auto mb-3">
-                      <Image className="w-8 h-8 text-[#C5A059]" />
-                    </div>
-                    <h4 className="text-base font-semibold text-[#0A192F] mb-2">Ihr Logo hochladen</h4>
-                    <button onClick={handleLogoUpload} className="bg-[#0A192F] text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-opacity-90 transition-all">
-                      {uploadedLogo ? 'Logo ändern' : 'Logo auswählen'}
-                    </button>
-                    {uploadedLogo && (
-                      <div className="mt-3 flex items-center justify-center space-x-2 text-sm">
-                        <Check className="w-4 h-4 text-green-600" />
-                        <span className="text-gray-700">{uploadedLogo.name}</span>
+                    {uploadedLogo ? (
+                      <div className="space-y-3">
+                        <img src={uploadedLogo.preview} alt="Logo" className="w-32 h-32 object-contain mx-auto rounded-lg" />
+                        <p className="text-sm text-gray-700">{uploadedLogo.name}</p>
+                        <button onClick={(e) => { e.stopPropagation(); removeLogo(); }} className="text-xs text-red-600 hover:text-red-700">
+                          Entfernen
+                        </button>
                       </div>
+                    ) : (
+                      <>
+                        <div className="w-16 h-16 bg-gradient-to-br from-[#C5A059]/20 to-[#C5A059]/10 rounded-xl flex items-center justify-center mx-auto mb-3">
+                          <Image className="w-8 h-8 text-[#C5A059]" />
+                        </div>
+                        <h4 className="text-base font-semibold text-[#0A192F] mb-2">Logo hochladen</h4>
+                        <p className="text-sm text-gray-600">Klicken zum Auswählen</p>
+                      </>
                     )}
                   </div>
                 </div>
               </div>
 
+              {/* Photo Upload mit Drag & Drop */}
               <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
                 <h3 className="text-lg font-bold text-[#0A192F] mb-4">Objektfotos</h3>
-                <div className="border-2 border-dashed border-[#C5A059]/50 rounded-xl p-6 hover:border-[#C5A059] transition-colors cursor-pointer">
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => handlePhotoUpload(e.target.files)}
+                  className="hidden"
+                />
+                <div
+                  ref={dropZoneRef}
+                  onDragEnter={handleDragEnter}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={() => photoInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-xl p-6 transition-all cursor-pointer ${
+                    isDragging 
+                      ? 'border-[#C5A059] bg-[#C5A059]/10' 
+                      : 'border-[#C5A059]/50 hover:border-[#C5A059]'
+                  }`}
+                >
                   <div className="text-center">
-                    <Image className="w-10 h-10 text-[#C5A059] mx-auto mb-3" />
-                    <p className="text-sm text-gray-600 mb-4">Bis zu 20 Fotos (JPG, PNG)</p>
-                    <button onClick={handlePhotoUpload} className="bg-[#0A192F] text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-opacity-90 transition-all">
-                      Fotos auswählen
-                    </button>
+                    <Upload className={`w-10 h-10 mx-auto mb-3 ${isDragging ? 'text-[#C5A059]' : 'text-gray-400'}`} />
+                    <p className="text-sm font-semibold text-gray-700 mb-1">
+                      {isDragging ? 'Dateien hier ablegen...' : 'Fotos hochladen'}
+                    </p>
+                    <p className="text-xs text-gray-500">Drag & Drop oder Klicken (max. 20 Fotos)</p>
                   </div>
                 </div>
                 
                 {uploadedPhotos.length > 0 && (
                   <div className="mt-4">
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm font-medium text-gray-700">{uploadedPhotos.length} Fotos</p>
-                      <button onClick={() => setUploadedPhotos([])} className="text-xs text-red-600 hover:text-red-700">Alle entfernen</button>
+                      <p className="text-sm font-medium text-gray-700">
+                        {uploadedPhotos.length} {uploadedPhotos.length === 1 ? 'Foto' : 'Fotos'}
+                      </p>
+                      <button onClick={() => setUploadedPhotos([])} className="text-xs text-red-600 hover:text-red-700">
+                        Alle entfernen
+                      </button>
                     </div>
-                    <div className="grid grid-cols-4 gap-2 max-h-40 overflow-y-auto">
+                    <div className="grid grid-cols-4 gap-2 max-h-60 overflow-y-auto">
                       {uploadedPhotos.map((photo) => (
                         <div key={photo.id} className="relative group">
-                          <div className="w-full h-20 bg-gradient-to-br from-slate-100 to-slate-200 rounded-lg flex items-center justify-center">
-                            <Image className="w-6 h-6 text-gray-400" />
-                          </div>
-                          <button onClick={() => removePhoto(photo.id)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <img 
+                            src={photo.preview} 
+                            alt={photo.name}
+                            className="w-full h-20 object-cover rounded-lg"
+                          />
+                          <button 
+                            onClick={() => removePhoto(photo.id)} 
+                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
                             <X className="w-3 h-3" />
                           </button>
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 rounded-b-lg truncate opacity-0 group-hover:opacity-100 transition-opacity">
+                            {photo.name}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -447,15 +765,25 @@ export default function ExposeProfiLanding() {
                 )}
               </div>
 
+              {/* Grundrisse */}
               <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-                <h3 className="text-lg font-bold text-[#0A192F] mb-4">Grundrisse</h3>
-                <div className="border-2 border-dashed border-[#C5A059]/50 rounded-xl p-6 hover:border-[#C5A059] transition-colors cursor-pointer">
+                <h3 className="text-lg font-bold text-[#0A192F] mb-4">Grundrisse (optional)</h3>
+                <input
+                  ref={floorPlanInputRef}
+                  type="file"
+                  accept="image/*,application/pdf"
+                  multiple
+                  onChange={handleFloorPlanUpload}
+                  className="hidden"
+                />
+                <div 
+                  onClick={() => floorPlanInputRef.current?.click()}
+                  className="border-2 border-dashed border-[#C5A059]/50 rounded-xl p-6 hover:border-[#C5A059] transition-colors cursor-pointer"
+                >
                   <div className="text-center">
                     <FileInput className="w-10 h-10 text-[#C5A059] mx-auto mb-3" />
-                    <p className="text-sm text-gray-600 mb-4">Mehrere Stockwerke (PDF, JPG, PNG)</p>
-                    <button onClick={handleFloorPlanUpload} className="bg-[#0A192F] text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-opacity-90 transition-all">
-                      Grundriss hinzufügen
-                    </button>
+                    <p className="text-sm text-gray-600 mb-2">Grundrisse hochladen</p>
+                    <p className="text-xs text-gray-500">PDF, JPG, PNG</p>
                   </div>
                 </div>
                 
@@ -482,8 +810,6 @@ export default function ExposeProfiLanding() {
               <h3 className="text-lg font-bold text-[#0A192F] mb-6">Objektdaten</h3>
               
               <div className="space-y-5">
-                {/* NEUE FELDER */}
-                
                 {/* Objekttyp */}
                 <div>
                   <label className="block text-sm font-semibold text-[#0A192F] mb-2 flex items-center space-x-2">
@@ -565,7 +891,7 @@ export default function ExposeProfiLanding() {
                   </div>
                 </div>
 
-                {/* Objektzustand */}
+                {/* Zustand */}
                 <div>
                   <label className="block text-sm font-semibold text-[#0A192F] mb-2 flex items-center space-x-2">
                     <Home className="w-4 h-4 text-[#C5A059]" />
@@ -614,7 +940,7 @@ export default function ExposeProfiLanding() {
 
                 <div className="border-t border-gray-200 pt-5"></div>
 
-                {/* Bestehende Felder */}
+                {/* Wohnfläche & Zimmer */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-semibold text-[#0A192F] mb-2">Wohnfläche (m²) *</label>
@@ -636,7 +962,7 @@ export default function ExposeProfiLanding() {
                       name="zimmer"
                       value={propertyData.zimmer}
                       onChange={(e) => handleNumericInput(e, 'zimmer', true)}
-                      placeholder="z.B. 3 oder 3.5"
+                      placeholder="z.B. 3"
                       className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#C5A059] focus:ring-2 focus:ring-[#C5A059]/20 outline-none transition-all"
                     />
                   </div>
@@ -657,6 +983,7 @@ export default function ExposeProfiLanding() {
 
                 <div className="border-t border-gray-200 pt-5"></div>
 
+                {/* Ausstattung */}
                 <div>
                   <label className="block text-sm font-semibold text-[#0A192F] mb-3">Ausstattung</label>
                   <div className="grid grid-cols-2 gap-2">
@@ -679,23 +1006,35 @@ export default function ExposeProfiLanding() {
 
                 <div className="border-t border-gray-200 pt-5"></div>
 
+                {/* Energieausweis */}
                 <div>
                   <label className="block text-sm font-semibold text-[#0A192F] mb-3">Energieausweis (GEG-Pflicht)</label>
                   
+                  <input
+                    ref={energyInputRef}
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={handleEnergyUpload}
+                    className="hidden"
+                  />
+                  
                   <button
                     type="button"
-                    onClick={handleEnergyUpload}
+                    onClick={() => energyInputRef.current?.click()}
                     disabled={energyUploadStatus === 'uploading' || energyUploadStatus === 'extracting'}
                     className={`w-full mb-4 px-4 py-3 rounded-lg text-sm font-medium transition-all flex items-center justify-center ${
                       energyUploadStatus === 'complete'
                         ? 'bg-emerald-50 border-2 border-emerald-500 text-emerald-700'
+                        : energyUploadStatus === 'error'
+                        ? 'bg-red-50 border-2 border-red-500 text-red-700'
                         : 'bg-slate-50 border-2 border-dashed border-[#C5A059] text-[#0A192F] hover:bg-slate-100'
                     }`}
                   >
-                    {energyUploadStatus === 'idle' && (<><Upload className="w-4 h-4 mr-2" />Energieausweis hochladen</>)}
-                    {energyUploadStatus === 'uploading' && (<><Sparkles className="w-4 h-4 mr-2 animate-pulse" />Wird hochgeladen...</>)}
-                    {energyUploadStatus === 'extracting' && (<><Sparkles className="w-4 h-4 mr-2 animate-spin" />KI extrahiert Daten...</>)}
+                    {energyUploadStatus === 'idle' && (<><Upload className="w-4 h-4 mr-2" />Energieausweis hochladen & analysieren</>)}
+                    {energyUploadStatus === 'uploading' && (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Wird hochgeladen...</>)}
+                    {energyUploadStatus === 'extracting' && (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />KI extrahiert Daten...</>)}
                     {energyUploadStatus === 'complete' && (<><Check className="w-4 h-4 mr-2" />Daten erfolgreich extrahiert</>)}
+                    {energyUploadStatus === 'error' && (<><X className="w-4 h-4 mr-2" />Fehler - Bitte manuell eingeben</>)}
                   </button>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -706,15 +1045,9 @@ export default function ExposeProfiLanding() {
                       className="px-3 py-2 rounded-lg border border-gray-200 focus:border-[#C5A059] focus:ring-2 focus:ring-[#C5A059]/20 outline-none text-sm"
                     >
                       <option value="">Klasse</option>
-                      <option value="A+">A+</option>
-                      <option value="A">A</option>
-                      <option value="B">B</option>
-                      <option value="C">C</option>
-                      <option value="D">D</option>
-                      <option value="E">E</option>
-                      <option value="F">F</option>
-                      <option value="G">G</option>
-                      <option value="H">H</option>
+                      {['A+', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].map(k => (
+                        <option key={k} value={k}>{k}</option>
+                      ))}
                     </select>
 
                     <input
@@ -731,38 +1064,59 @@ export default function ExposeProfiLanding() {
 
                 <button 
                   onClick={handleGenerateExpose}
-                  disabled={!isFormValid()}
+                  disabled={!isFormValid() || isGenerating}
                   className={`w-full px-6 py-4 rounded-lg text-lg font-bold transition-all mt-6 ${
-                    isFormValid()
+                    isFormValid() && !isGenerating
                       ? 'bg-gradient-to-r from-[#C5A059] to-[#A68B4A] hover:from-[#B39050] hover:to-[#957A3F] text-white transform hover:scale-105 shadow-xl cursor-pointer'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   }`}
                 >
-                  <Sparkles className="w-5 h-5 inline mr-2" />
-                  Exposé generieren
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="w-5 h-5 inline mr-2 animate-spin" />
+                      KI analysiert Fotos...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-5 h-5 inline mr-2" />
+                      Exposé generieren
+                    </>
+                  )}
                 </button>
 
-                {!isFormValid() && (
-                  <p className="text-xs text-red-600 text-center">Bitte füllen Sie alle Pflichtfelder (*) aus</p>
+                {isGenerating && generationProgress > 0 && (
+                  <div className="mt-3">
+                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                      <div 
+                        className="bg-gradient-to-r from-[#C5A059] to-[#A68B4A] h-2 transition-all duration-300"
+                        style={{ width: `${generationProgress}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-xs text-center text-gray-600 mt-2">
+                      {uploadedPhotos.length > 0 ? `Analysiere ${uploadedPhotos.length} Foto${uploadedPhotos.length > 1 ? 's' : ''}...` : 'Generiere Text...'}
+                    </p>
+                  </div>
                 )}
 
-                <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                  <p className="text-xs text-gray-700 leading-relaxed">
-                    <Shield className="w-4 h-4 inline mr-1 text-amber-600" />
-                    <strong>Rechtssicher:</strong> Die KI erstellt einen Entwurf. Der Makler prüft gemäß GEG alle Pflichtangaben vor Veröffentlichung.
-                  </p>
-                </div>
+                {!isFormValid() && !isGenerating && (
+                  <p className="text-xs text-red-600 text-center">Bitte füllen Sie alle Pflichtfelder (*) aus</p>
+                )}
               </div>
             </div>
           </div>
 
-          {/* TEASER TEXT PREVIEW */}
+          {/* TEXT PREVIEW MIT TEASER */}
           {showPreview && (
             <div className="mt-10 bg-white rounded-2xl p-8 shadow-xl border border-gray-100 relative">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-2">
                   <Edit3 className="w-5 h-5 text-[#C5A059]" />
                   <h3 className="text-xl font-bold text-[#0A192F]">Text-Vorschau & Bearbeitung</h3>
+                  {uploadedPhotos.length > 0 && !isGenerating && (
+                    <span className="text-sm text-green-600 bg-green-50 px-3 py-1 rounded-full">
+                      {uploadedPhotos.length} {uploadedPhotos.length === 1 ? 'Foto' : 'Fotos'} analysiert
+                    </span>
+                  )}
                 </div>
                 {isUnlocked && (
                   <button className="bg-[#0A192F] text-white px-6 py-3 rounded-lg font-semibold hover:bg-opacity-90 transition-all flex items-center space-x-2">
@@ -776,13 +1130,13 @@ export default function ExposeProfiLanding() {
                 <textarea
                   value={getTeaserText()}
                   onChange={(e) => isUnlocked && setAiGeneratedText(e.target.value)}
-                  disabled={!isUnlocked}
+                  disabled={!isUnlocked || isGenerating}
                   className="w-full h-96 px-6 py-4 rounded-xl border border-gray-200 focus:border-[#C5A059] focus:ring-2 focus:ring-[#C5A059]/20 outline-none font-sans text-gray-800 leading-relaxed resize-none"
                   placeholder="Hier erscheint der von der KI generierte Exposé-Text..."
                 />
                 
                 {/* BLUR OVERLAY */}
-                {!isUnlocked && getBlurredText() && (
+                {!isUnlocked && getBlurredText() && !isGenerating && (
                   <div className="relative -mt-48 h-48">
                     <div className="absolute inset-0 bg-gradient-to-b from-transparent to-white/95 backdrop-blur-md"></div>
                     <div className="absolute inset-0 flex items-center justify-center">
@@ -792,7 +1146,7 @@ export default function ExposeProfiLanding() {
                         </div>
                         <h4 className="text-2xl font-bold text-[#0A192F] mb-2">Vollversion freischalten</h4>
                         <p className="text-gray-600 mb-6">
-                          Schalten Sie das vollständige Exposé frei und erhalten Sie Zugriff auf alle Features.
+                          Schalten Sie das vollständige Exposé frei.
                         </p>
                         <button
                           onClick={handleUnlock}
@@ -810,7 +1164,7 @@ export default function ExposeProfiLanding() {
               {isUnlocked && (
                 <p className="mt-3 text-sm text-gray-600">
                   <Edit3 className="w-4 h-4 inline mr-1" />
-                  Sie können den Text jederzeit anpassen, bevor Sie ihn als PDF exportieren.
+                  Sie können den Text jederzeit anpassen.
                 </p>
               )}
             </div>
@@ -823,7 +1177,7 @@ export default function ExposeProfiLanding() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-[#0A192F] mb-4">Warum Exposé-Profi?</h2>
-            <p className="text-xl text-gray-600">Die Vorteile für professionelle Makler</p>
+            <p className="text-xl text-gray-600">KI-Bildanalyse für verkaufsstarke Texte</p>
           </div>
           
           <div className="grid md:grid-cols-3 gap-8">
@@ -832,23 +1186,23 @@ export default function ExposeProfiLanding() {
                 <Clock className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-2xl font-bold text-[#0A192F] mb-4">90% Zeitersparnis</h3>
-              <p className="text-gray-600 leading-relaxed">Von 2 Stunden auf 5 Minuten. Fokus auf Verkauf statt Verwaltung.</p>
+              <p className="text-gray-600 leading-relaxed">KI analysiert Ihre Fotos automatisch und erstellt professionelle Texte in Sekunden.</p>
             </div>
 
             <div className="bg-gradient-to-br from-slate-50 to-white p-8 rounded-2xl border border-gray-100 hover:shadow-xl transition-all">
               <div className="w-16 h-16 bg-gradient-to-br from-[#C5A059] to-[#A68B4A] rounded-xl flex items-center justify-center mb-6">
-                <Palette className="w-8 h-8 text-white" />
+                <Sparkles className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-2xl font-bold text-[#0A192F] mb-4">Ihr Branding</h3>
-              <p className="text-gray-600 leading-relaxed">Logo, Farben, Schriftarten – alles in Ihrer Corporate Identity.</p>
+              <h3 className="text-2xl font-bold text-[#0A192F] mb-4">Vision-KI</h3>
+              <p className="text-gray-600 leading-relaxed">GPT-4o analysiert Materialien, Lichtverhältnisse und Raumaufteilung.</p>
             </div>
 
             <div className="bg-gradient-to-br from-slate-50 to-white p-8 rounded-2xl border border-gray-100 hover:shadow-xl transition-all">
               <div className="w-16 h-16 bg-gradient-to-br from-[#C5A059] to-[#A68B4A] rounded-xl flex items-center justify-center mb-6">
                 <Shield className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-2xl font-bold text-[#0A192F] mb-4">GEG-konform</h3>
-              <p className="text-gray-600 leading-relaxed">Automatische Prüfung aller Pflichtangaben nach deutschem Recht.</p>
+              <h3 className="text-2xl font-bold text-[#0A192F] mb-4">OCR für Energieausweis</h3>
+              <p className="text-gray-600 leading-relaxed">Automatische Extraktion aller GEG-relevanten Daten aus Ihrem Energieausweis.</p>
             </div>
           </div>
         </div>
@@ -859,14 +1213,14 @@ export default function ExposeProfiLanding() {
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-[#0A192F] mb-4">Transparente Preise</h2>
-            <p className="text-xl text-gray-600">Wählen Sie das passende Paket für Ihr Geschäft</p>
+            <p className="text-xl text-gray-600">Mit KI-Bildanalyse inklusive</p>
           </div>
           
           <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
             <div className="bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-[#C5A059] transition-all hover:shadow-xl">
               <div className="text-center mb-6">
                 <h3 className="text-2xl font-bold text-[#0A192F] mb-2">Starter</h3>
-                <p className="text-gray-600 mb-6">Perfekt für gelegentliche Nutzung</p>
+                <p className="text-gray-600 mb-6">Einzelne Exposés</p>
                 <div className="mb-6">
                   <span className="text-5xl font-bold text-[#0A192F]">29€</span>
                   <span className="text-gray-600 ml-2">pro Exposé</span>
@@ -876,23 +1230,19 @@ export default function ExposeProfiLanding() {
               <ul className="space-y-4 mb-8">
                 <li className="flex items-start">
                   <Check className="w-5 h-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-700">1 professionelles Exposé</span>
+                  <span className="text-gray-700">KI-Bildanalyse (bis zu 20 Fotos)</span>
                 </li>
                 <li className="flex items-start">
                   <Check className="w-5 h-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-700">KI-generierte Texte</span>
+                  <span className="text-gray-700">Energieausweis-OCR</span>
                 </li>
                 <li className="flex items-start">
                   <Check className="w-5 h-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-700">GEG-konforme Pflichtangaben</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="w-5 h-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-700">PDF-Export in Standarddesign</span>
+                  <span className="text-gray-700">GEG-konforme Texte</span>
                 </li>
                 <li className="flex items-start text-gray-400">
                   <X className="w-5 h-5 mr-3 flex-shrink-0 mt-0.5" />
-                  <span>Eigenes Logo & Branding</span>
+                  <span>White-Label Branding</span>
                 </li>
               </ul>
               
@@ -906,7 +1256,7 @@ export default function ExposeProfiLanding() {
               
               <div className="text-center mb-6">
                 <h3 className="text-2xl font-bold text-white mb-2">Pro-Abo</h3>
-                <p className="text-gray-300 mb-6">Für professionelle Makler</p>
+                <p className="text-gray-300 mb-6">Unbegrenzt</p>
                 <div className="mb-6">
                   <span className="text-5xl font-bold text-white">79€</span>
                   <span className="text-gray-300 ml-2">pro Monat</span>
@@ -920,19 +1270,15 @@ export default function ExposeProfiLanding() {
                 </li>
                 <li className="flex items-start">
                   <Check className="w-5 h-5 text-[#C5A059] mr-3 flex-shrink-0 mt-0.5" />
-                  <span className="text-white">Premium KI-Texte</span>
+                  <span className="text-white">KI-Bildanalyse (unbegrenzt)</span>
                 </li>
                 <li className="flex items-start">
                   <Check className="w-5 h-5 text-[#C5A059] mr-3 flex-shrink-0 mt-0.5" />
-                  <span className="text-white">GEG-konforme Pflichtangaben</span>
+                  <span className="text-white">Energieausweis-OCR</span>
                 </li>
                 <li className="flex items-start">
                   <Check className="w-5 h-5 text-[#C5A059] mr-3 flex-shrink-0 mt-0.5" />
-                  <span className="text-white font-semibold">Ihr Logo & Ihre Farben</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="w-5 h-5 text-[#C5A059] mr-3 flex-shrink-0 mt-0.5" />
-                  <span className="text-white font-semibold">White-Label PDF-Export</span>
+                  <span className="text-white font-semibold">White-Label Branding</span>
                 </li>
                 <li className="flex items-start">
                   <Check className="w-5 h-5 text-[#C5A059] mr-3 flex-shrink-0 mt-0.5" />
@@ -960,7 +1306,7 @@ export default function ExposeProfiLanding() {
                 <span className="text-2xl font-bold">Exposé-Profi</span>
               </div>
               <p className="text-gray-400 leading-relaxed mb-6">
-                Die führende KI-Lösung für professionelle Immobilien-Exposés.
+                KI-gestützte Exposé-Erstellung mit Bildanalyse.
               </p>
             </div>
 
@@ -969,7 +1315,6 @@ export default function ExposeProfiLanding() {
               <ul className="space-y-3">
                 <li><button onClick={() => scrollToSection('vorteile')} className="text-gray-400 hover:text-[#C5A059] transition-colors">Vorteile</button></li>
                 <li><button onClick={() => scrollToSection('preise')} className="text-gray-400 hover:text-[#C5A059] transition-colors">Preise</button></li>
-                <li><button onClick={openBetaModal} className="text-gray-400 hover:text-[#C5A059] transition-colors">Beta-Zugang</button></li>
               </ul>
             </div>
 
@@ -979,25 +1324,21 @@ export default function ExposeProfiLanding() {
                 <li><button onClick={() => openLegalModal('impressum')} className="text-gray-400 hover:text-[#C5A059] transition-colors text-left">Impressum</button></li>
                 <li><button onClick={() => openLegalModal('datenschutz')} className="text-gray-400 hover:text-[#C5A059] transition-colors text-left">Datenschutz</button></li>
                 <li><button onClick={() => openLegalModal('agb')} className="text-gray-400 hover:text-[#C5A059] transition-colors text-left">AGB</button></li>
-                <li><button onClick={() => openLegalModal('widerruf')} className="text-gray-400 hover:text-[#C5A059] transition-colors text-left">Widerruf</button></li>
               </ul>
             </div>
           </div>
 
           <div className="border-t border-gray-800 pt-8">
-            <div className="flex flex-col md:flex-row justify-between items-center">
-              <p className="text-gray-400 text-sm">© 2025 Exposé-Profi. Alle Rechte vorbehalten.</p>
-              <p className="text-gray-400 text-sm mt-4 md:mt-0">Made with ❤️ in Deutschland</p>
-            </div>
+            <p className="text-gray-400 text-sm text-center">© 2025 Exposé-Profi. Alle Rechte vorbehalten.</p>
           </div>
         </div>
       </footer>
 
       {/* MODALS */}
       {legalContent && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto" onClick={closeLegalModal}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={closeLegalModal}>
           <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full my-8 relative" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-8 py-6 rounded-t-2xl flex items-center justify-between z-10">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-8 py-6 rounded-t-2xl flex items-center justify-between">
               <h2 className="text-3xl font-bold text-[#0A192F]">{legalTexts[legalContent].title}</h2>
               <button onClick={closeLegalModal} className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors">
                 <X className="w-6 h-6 text-gray-600" />
@@ -1005,12 +1346,12 @@ export default function ExposeProfiLanding() {
             </div>
             
             <div className="px-8 py-6 max-h-[70vh] overflow-y-auto">
-              <div className="prose prose-slate max-w-none text-gray-700 leading-relaxed">
+              <div className="prose prose-slate max-w-none">
                 {legalTexts[legalContent].sections.map((section, index) => (
                   <div key={index} className="mb-6">
                     <h3 className="text-xl font-bold text-[#0A192F] mb-4">{section.heading}</h3>
                     <div className="text-gray-700">
-                      {typeof section.content === 'string' ? <p className="mb-4">{section.content}</p> : section.content}
+                      {typeof section.content === 'string' ? <p>{section.content}</p> : section.content}
                     </div>
                   </div>
                 ))}
@@ -1041,7 +1382,7 @@ export default function ExposeProfiLanding() {
                   </div>
                   <h3 className="text-2xl font-bold text-[#0A192F] mb-2">Beta-Zugang anfordern</h3>
                   <p className="text-gray-600">
-                    Hinterlassen Sie Ihre E-Mail-Adresse, und wir benachrichtigen Sie, sobald Ihr Zugang bereit ist.
+                    Seien Sie einer der Ersten, die unsere KI-Bildanalyse nutzen.
                   </p>
                 </div>
 
@@ -1073,7 +1414,7 @@ export default function ExposeProfiLanding() {
                 </div>
                 <h3 className="text-2xl font-bold text-[#0A192F] mb-2">Vielen Dank!</h3>
                 <p className="text-gray-600">
-                  Wir haben Ihre E-Mail-Adresse erhalten und werden Sie benachrichtigen.
+                  Wir benachrichtigen Sie sobald Ihr Zugang bereit ist.
                 </p>
               </div>
             )}
