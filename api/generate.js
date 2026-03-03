@@ -1,8 +1,7 @@
 // api/generate.js
-// Ultra-robuste Version mit maximalem Error-Handling
+// Finale Version mit strikter Datennutzung und Platzhaltern
 
 export default async function handler(req, res) {
-  // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -16,7 +15,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. API-Key prüfen
     const apiKey = process.env.OPENAI_API_KEY;
     
     if (!apiKey) {
@@ -28,148 +26,87 @@ export default async function handler(req, res) {
       });
     }
 
-    console.log('[OK] API-Key gefunden:', apiKey.substring(0, 10) + '...');
+    console.log('[OK] API-Key gefunden');
 
-    // 2. Request Body prüfen
-    let propertyData;
-    
-    try {
-      propertyData = req.body?.propertyData;
-    } catch (e) {
-      console.error('[ERROR] Body parsing fehler:', e);
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid request body',
-        message: 'Konnte propertyData nicht lesen'
-      });
-    }
+    const { propertyData } = req.body;
     
     if (!propertyData) {
       console.error('[ERROR] propertyData fehlt');
       return res.status(400).json({ 
         success: false,
-        error: 'Keine propertyData',
-        message: 'propertyData fehlt im Request Body'
+        error: 'Keine propertyData'
       });
     }
 
-    console.log('[OK] PropertyData:', {
-      wohnflaeche: propertyData.wohnflaeche,
-      zimmer: propertyData.zimmer
-    });
+    console.log('[OK] PropertyData empfangen');
 
-    // 3. Prompt erstellen
-    const prompt = `Erstelle ein professionelles Immobilien-Exposé für eine ${propertyData.zimmer || '3'}-Zimmer-Wohnung mit ${propertyData.wohnflaeche || '85'} m² Wohnfläche.
+    // Prompt mit strikten Anweisungen
+    const prompt = createStrictPrompt(propertyData);
 
-Schreibe einen verkaufsstarken Text mit ca. 250 Wörtern.
-
-Struktur:
-1. Einleitung (emotional, ansprechend)
-2. Objektbeschreibung (Räume, Wohngefühl)
-3. Ausstattung
-4. Fazit mit Call-to-Action
-
-Schreibe auf Deutsch, professionell und verkaufsstark.`;
-
-    console.log('[OK] Prompt erstellt');
-
-    // 4. OpenAI API aufrufen
     console.log('[START] OpenAI Request...');
     
-    let response;
-    
-    try {
-      response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o',
-          messages: [
-            { 
-              role: 'system', 
-              content: 'Du bist ein professioneller Immobilienmakler. Schreibe verkaufsstarke Exposé-Texte auf Deutsch.' 
-            },
-            { 
-              role: 'user', 
-              content: prompt 
-            }
-          ],
-          max_tokens: 1500,
-          temperature: 0.7
-        })
-      });
-    } catch (fetchError) {
-      console.error('[ERROR] Fetch failed:', fetchError);
-      return res.status(500).json({
-        success: false,
-        error: 'OpenAI Verbindung fehlgeschlagen',
-        message: fetchError.message
-      });
-    }
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          { 
+            role: 'system', 
+            content: `Du bist ein professioneller Immobilienmakler, der Exposé-Texte schreibt.
+
+KRITISCHE REGEL: Nutze NUR die bereitgestellten Informationen!
+
+Wenn eine Information fehlt oder nicht angegeben ist:
+- Setze einen Platzhalter in eckigen Klammern: [BAUJAHR PRÜFEN], [ENERGIEDATEN EINTRAGEN], etc.
+- Erfinde NIEMALS Daten oder Details
+- Schreibe keine Vermutungen oder Annahmen
+
+Wenn PLZ und Ort angegeben sind:
+- Integriere sie aktiv in die Lagebeschreibung
+- Beschreibe die Lage konkret für diesen Ort
+
+Schreibe verkaufsstark, emotional und professionell auf Deutsch.` 
+          },
+          { 
+            role: 'user', 
+            content: prompt 
+          }
+        ],
+        max_tokens: 1800,
+        temperature: 0.7
+      })
+    });
 
     console.log('[OK] OpenAI Response Status:', response.status);
 
-    // 5. Response prüfen
     if (!response.ok) {
-      let errorData;
-      
-      try {
-        errorData = await response.json();
-      } catch (e) {
-        const text = await response.text();
-        console.error('[ERROR] OpenAI Error (non-JSON):', text);
-        return res.status(response.status).json({
-          success: false,
-          error: 'OpenAI Fehler',
-          message: `Status ${response.status}: ${text}`
-        });
-      }
-
+      const errorData = await response.json();
       console.error('[ERROR] OpenAI Error:', errorData);
       
       return res.status(response.status).json({
         success: false,
         error: 'OpenAI API Fehler',
-        message: errorData.error?.message || 'Unbekannter Fehler',
-        details: errorData
+        message: errorData.error?.message || 'Unbekannter Fehler'
       });
     }
 
-    // 6. Response parsen
-    let data;
-    
-    try {
-      data = await response.json();
-    } catch (e) {
-      console.error('[ERROR] JSON parse failed:', e);
-      const text = await response.text();
-      return res.status(500).json({
-        success: false,
-        error: 'Response Parse Fehler',
-        message: 'Konnte OpenAI Response nicht parsen',
-        rawResponse: text.substring(0, 200)
-      });
-    }
-
-    // 7. Text extrahieren
+    const data = await response.json();
     const text = data.choices?.[0]?.message?.content;
 
     if (!text) {
-      console.error('[ERROR] Kein Text in Response:', data);
+      console.error('[ERROR] Kein Text generiert');
       return res.status(500).json({
         success: false,
-        error: 'Kein Text generiert',
-        message: 'OpenAI hat keinen Text zurückgegeben',
-        data: data
+        error: 'Kein Text generiert'
       });
     }
 
-    console.log('[SUCCESS] Text generiert:', text.substring(0, 100) + '...');
+    console.log('[SUCCESS] Text generiert');
 
-    // 8. Erfolgreiche Response
     return res.status(200).json({
       success: true,
       text: text,
@@ -177,14 +114,133 @@ Schreibe auf Deutsch, professionell und verkaufsstark.`;
     });
 
   } catch (error) {
-    // Catch-all für unerwartete Fehler
     console.error('[CRITICAL ERROR]', error);
     
     return res.status(500).json({
       success: false,
       error: 'Server Error',
-      message: error.message || 'Ein unerwarteter Fehler ist aufgetreten',
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      message: error.message || 'Unerwarteter Fehler'
     });
   }
+}
+
+// Hilfsfunktion: Strikter Prompt mit Platzhaltern
+function createStrictPrompt(data) {
+  // Basis-Informationen
+  const objekttyp = data.objekttyp || '[OBJEKTTYP PRÜFEN]';
+  const vermarktungsart = data.vermarktungsart || '[VERMARKTUNG PRÜFEN]';
+  const wohnflaeche = data.wohnflaeche || '[FLÄCHE PRÜFEN]';
+  const zimmer = data.zimmer || '[ZIMMER PRÜFEN]';
+  const baujahr = data.baujahr || '[BAUJAHR PRÜFEN]';
+  const zustand = data.zustand || '[ZUSTAND PRÜFEN]';
+  const preis = data.preis || '[PREIS PRÜFEN]';
+  const plz = data.plz || '';
+  const ort = data.ort || '';
+  
+  // Lage
+  let lageInfo = '';
+  if (plz && ort) {
+    lageInfo = `PLZ ${plz} in ${ort}`;
+  } else if (ort) {
+    lageInfo = `in ${ort}`;
+  } else if (plz) {
+    lageInfo = `PLZ ${plz}`;
+  } else {
+    lageInfo = '[LAGE PRÜFEN]';
+  }
+
+  // Ausstattung
+  const features = [
+    ...data.aussenbereich || [],
+    ...data.innenraum || [],
+    ...data.parkenKeller || [],
+    ...data.technikKomfort || []
+  ];
+  
+  const ausstattungText = features.length > 0 
+    ? features.map(f => `- ${f}`).join('\n')
+    : '[AUSSTATTUNG PRÜFEN]';
+
+  // Energiedaten
+  const energieInfo = data.effizienzklasse 
+    ? `Energieeffizienzklasse: ${data.effizienzklasse}\nEnergiebedarf: ${data.energiebedarf || '[WERT PRÜFEN]'} kWh/(m²·a)\nEnergieträger: ${data.energietraeger || '[TRÄGER PRÜFEN]'}`
+    : '[ENERGIEAUSWEIS PRÜFEN - GEG-PFLICHT!]';
+
+  return `Erstelle ein professionelles Immobilien-Exposé mit folgenden EXAKTEN Daten:
+
+═══════════════════════════════════════
+OBJEKTDATEN (NUR DIESE NUTZEN!)
+═══════════════════════════════════════
+
+Objekttyp: ${objekttyp}
+Vermarktungsart: ${vermarktungsart}
+Wohnfläche: ${wohnflaeche} m²
+Zimmer: ${zimmer}
+Baujahr: ${baujahr}
+Zustand: ${zustand}
+${vermarktungsart === 'Verkauf' ? 'Kaufpreis' : 'Kaltmiete'}: ${preis}${preis !== '[PREIS PRÜFEN]' ? ' €' : ''}
+
+LAGE:
+${lageInfo}
+
+AUSSTATTUNG:
+${ausstattungText}
+
+ENERGETISCHE DATEN:
+${energieInfo}
+
+${data.weiteresBesonderheiten ? `WEITERE BESONDERHEITEN:\n${data.weiteresBesonderheiten}` : ''}
+
+═══════════════════════════════════════
+AUFGABE
+═══════════════════════════════════════
+
+Schreibe ein verkaufsstarkes Exposé mit dieser STRUKTUR:
+
+1. ÜBERSCHRIFT (1 Zeile)
+   - Attraktiv und konkret
+   - Nutze Objekttyp und Lage
+
+2. EINLEITUNG (2-3 Sätze)
+   - Emotional ansprechend
+   - Fokus auf Wohnqualität
+
+3. OBJEKTBESCHREIBUNG (4-5 Sätze)
+   - Beschreibe Räume und Wohngefühl
+   - Nutze nur die angegebenen Daten
+   - Bei fehlenden Infos: Platzhalter setzen
+
+4. LAGE${lageInfo !== '[LAGE PRÜFEN]' ? ` (${lageInfo})` : ''} (3-4 Sätze)
+   ${lageInfo !== '[LAGE PRÜFEN]' 
+     ? `- Beschreibe konkret die Vorzüge von ${ort || 'dieser Lage'}\n   - Infrastruktur, Anbindung, Lebensqualität` 
+     : '- Schreibe: "Die genaue Lage entnehmen Sie bitte den Unterlagen [LAGE PRÜFEN]"'}
+
+5. AUSSTATTUNG & HIGHLIGHTS
+   - Liste nur die angegebenen Ausstattungsmerkmale
+   - Nutze ✓ Zeichen
+   - Keine erfundenen Features!
+
+6. ENERGETISCHE DATEN
+   - Exakt die angegebenen Werte
+   - Wenn Daten fehlen: Platzhalter wie oben
+
+7. PREIS & KONDITIONEN
+   - Nenne den Preis wie angegeben
+   - Wenn [PREIS PRÜFEN]: "Preis auf Anfrage"
+
+8. FAZIT & CALL-TO-ACTION (2 Sätze)
+   - Einladung zur Besichtigung
+
+═══════════════════════════════════════
+WICHTIGE REGELN
+═══════════════════════════════════════
+
+✓ Nutze NUR die bereitgestellten Daten
+✓ Setze Platzhalter für fehlende Infos: [TEXT PRÜFEN]
+✓ Keine Fantasie-Details erfinden
+✓ Keine Vermutungen über Lage/Ausstattung
+✓ Professionell und verkaufsstark schreiben
+✓ Ca. 350-450 Wörter
+
+Beginne jetzt mit dem Exposé-Text:`;
 }
