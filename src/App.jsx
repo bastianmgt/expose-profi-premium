@@ -526,7 +526,89 @@ export default function ExposeProfiLanding() {
       openBetaModal();
     }, 500);
   };
+const handleUnlock = () => {
+  setIsUnlocked(true);
+  setTimeout(() => {
+    openBetaModal();
+  }, 500);
+};
 
+// ← HIER die komplette handleExportPDF Funktion einfügen ←
+// (Aus handleExportPDF-function.js kopieren)
+
+const getTeaserText = () => {
+  // ...
+};
+```
+
+### **SCHRITT 3: Fertig! Testen Sie es:**
+
+1. Exposé generieren
+2. Vollversion freischalten  
+3. Auf "Als PDF exportieren" klicken
+4. **PDF wird heruntergeladen!** ✅
+
+---
+
+## 🎨 **PDF-LAYOUT VORSCHAU:**
+```
+┌─────────────────────────────────────────┐
+│ [IHR LOGO]         Wohnung              │
+│                    79379 Müllheim       │
+│                    Kaufpreis: 350.000 € │
+├─────────────────────────────────────────┤ ← Gold Linie
+│                                         │
+│ Exklusive Wohnung in Müllheim          │ ← 18pt Bold
+│                                         │
+│ ┌─────────────────────────────────┐   │
+│ │ 85 m² • 3 Zimmer • Baujahr 2015│   │ ← Grauer Kasten
+│ │ Energie: Klasse C, 85 kWh/(m²·a)│   │
+│ └─────────────────────────────────┘   │
+│                                         │
+│ [EXPOSÉ-TEXT VON KI]                   │
+│ Die hochwertige Wohnung bietet...      │
+│ ...                                     │
+│ (Automatischer Seitenumbruch)          │
+│                                         │
+│ Ausstattung & Highlights               │
+│ ┌─────────────────────────────────┐   │
+│ │ ✓ Balkon        ✓ Einbauküche  │   │ ← 2 Spalten
+│ │ ✓ Terrasse      ✓ Gäste-WC     │   │ ← Gold Checks
+│ │ ✓ Garage        ✓ Aufzug       │   │
+│ └─────────────────────────────────┘   │
+├─────────────────────────────────────────┤ ← Gold Linie
+│ Erstellt mit Exposé-Profi • expose-... │ ← Footer
+└─────────────────────────────────────────┘
+```
+
+---
+
+## 🎨 **DESIGN-FEATURES:**
+
+✅ **Brand-Farben:**
+- Gold: `#C5A059` (Akzente, Linien, Checkmarks)
+- Dunkelblau: `#0A192F` (Überschriften)
+- Grau: Eckdaten-Hintergrund
+
+✅ **Schriftarten:**
+- Helvetica Bold: Überschriften
+- Helvetica Normal: Fließtext
+- Größen: 18pt, 12pt, 10pt, 9pt, 8pt
+
+✅ **Abgerundete Ecken:**
+- Eckdaten-Box: 2mm Radius
+- Ausstattungs-Box: 2mm Radius
+
+✅ **Automatisch:**
+- Seitenumbruch bei langem Text
+- Footer auf jeder Seite
+- 2-Spalten-Layout für Ausstattung
+
+---
+
+## 📦 **DATEINAME-FORMAT:**
+```
+Expose_Wohnung_Müllheim_2025-02-26.pdf
   const getTeaserText = () => {
     if (isUnlocked) {
       return aiGeneratedText;
