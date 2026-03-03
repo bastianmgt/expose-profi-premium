@@ -526,89 +526,186 @@ export default function ExposeProfiLanding() {
       openBetaModal();
     }, 500);
   };
-const handleUnlock = () => {
-  setIsUnlocked(true);
-  setTimeout(() => {
-    openBetaModal();
-  }, 500);
-};
 
-// ← HIER die komplette handleExportPDF Funktion einfügen ←
-// (Aus handleExportPDF-function.js kopieren)
+  // PDF-EXPORT FUNKTION
+  const handleExportPDF = () => {
+    const { jsPDF } = window.jspdf;
+    
+    if (!jsPDF) {
+      alert('PDF-Bibliothek nicht geladen. Bitte Seite neu laden.');
+      return;
+    }
 
-const getTeaserText = () => {
-  // ...
-};
-```
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
 
-### **SCHRITT 3: Fertig! Testen Sie es:**
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 20;
+    let yPos = margin;
 
-1. Exposé generieren
-2. Vollversion freischalten  
-3. Auf "Als PDF exportieren" klicken
-4. **PDF wird heruntergeladen!** ✅
+    const brandColor = { r: 197, g: 160, b: 89 };
+    const darkColor = { r: 10, g: 25, b: 47 };
+    const grayColor = { r: 100, g: 100, b: 100 };
 
----
+    if (uploadedLogo && uploadedLogo.base64) {
+      try {
+        doc.addImage(uploadedLogo.base64, 'JPEG', margin, yPos, 40, 20);
+      } catch (error) {
+        console.error('Logo konnte nicht eingefügt werden:', error);
+      }
+    }
 
-## 🎨 **PDF-LAYOUT VORSCHAU:**
-```
-┌─────────────────────────────────────────┐
-│ [IHR LOGO]         Wohnung              │
-│                    79379 Müllheim       │
-│                    Kaufpreis: 350.000 € │
-├─────────────────────────────────────────┤ ← Gold Linie
-│                                         │
-│ Exklusive Wohnung in Müllheim          │ ← 18pt Bold
-│                                         │
-│ ┌─────────────────────────────────┐   │
-│ │ 85 m² • 3 Zimmer • Baujahr 2015│   │ ← Grauer Kasten
-│ │ Energie: Klasse C, 85 kWh/(m²·a)│   │
-│ └─────────────────────────────────┘   │
-│                                         │
-│ [EXPOSÉ-TEXT VON KI]                   │
-│ Die hochwertige Wohnung bietet...      │
-│ ...                                     │
-│ (Automatischer Seitenumbruch)          │
-│                                         │
-│ Ausstattung & Highlights               │
-│ ┌─────────────────────────────────┐   │
-│ │ ✓ Balkon        ✓ Einbauküche  │   │ ← 2 Spalten
-│ │ ✓ Terrasse      ✓ Gäste-WC     │   │ ← Gold Checks
-│ │ ✓ Garage        ✓ Aufzug       │   │
-│ └─────────────────────────────────┘   │
-├─────────────────────────────────────────┤ ← Gold Linie
-│ Erstellt mit Exposé-Profi • expose-... │ ← Footer
-└─────────────────────────────────────────┘
-```
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(darkColor.r, darkColor.g, darkColor.b);
 
----
+    const rightX = pageWidth - margin;
+    const objectInfo = [
+      propertyData.objekttyp || 'Immobilie',
+      propertyData.ort ? `${propertyData.plz || ''} ${propertyData.ort}`.trim() : '',
+      propertyData.preis ? `${propertyData.vermarktungsart === 'Verkauf' ? 'Kaufpreis' : 'Kaltmiete'}: ${Number(propertyData.preis).toLocaleString('de-DE')} €` : ''
+    ].filter(Boolean);
 
-## 🎨 **DESIGN-FEATURES:**
+    objectInfo.forEach((line, index) => {
+      doc.text(line, rightX, yPos + (index * 6), { align: 'right' });
+    });
 
-✅ **Brand-Farben:**
-- Gold: `#C5A059` (Akzente, Linien, Checkmarks)
-- Dunkelblau: `#0A192F` (Überschriften)
-- Grau: Eckdaten-Hintergrund
+    yPos += 35;
 
-✅ **Schriftarten:**
-- Helvetica Bold: Überschriften
-- Helvetica Normal: Fließtext
-- Größen: 18pt, 12pt, 10pt, 9pt, 8pt
+    doc.setDrawColor(brandColor.r, brandColor.g, brandColor.b);
+    doc.setLineWidth(0.5);
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+    yPos += 10;
 
-✅ **Abgerundete Ecken:**
-- Eckdaten-Box: 2mm Radius
-- Ausstattungs-Box: 2mm Radius
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.setTextColor(darkColor.r, darkColor.g, darkColor.b);
+    
+    const headline = `${propertyData.objekttyp || 'Exklusive Immobilie'} in ${propertyData.ort || 'bester Lage'}`;
+    doc.text(headline, margin, yPos);
+    yPos += 12;
 
-✅ **Automatisch:**
-- Seitenumbruch bei langem Text
-- Footer auf jeder Seite
-- 2-Spalten-Layout für Ausstattung
+    doc.setFillColor(250, 250, 250);
+    doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 20, 2, 2, 'F');
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(grayColor.r, grayColor.g, grayColor.b);
+    
+    const eckdaten = [
+      `${propertyData.wohnflaeche} m²`,
+      `${propertyData.zimmer} Zimmer`,
+      propertyData.baujahr ? `Baujahr ${propertyData.baujahr}` : null,
+      propertyData.zustand || null
+    ].filter(Boolean).join('  •  ');
+    
+    doc.text(eckdaten, margin + 5, yPos + 7);
+    
+    if (propertyData.effizienzklasse) {
+      const energieText = `Energie: Klasse ${propertyData.effizienzklasse}, ${propertyData.energiebedarf || '—'} kWh/(m²·a)`;
+      doc.text(energieText, margin + 5, yPos + 14);
+    }
+    
+    yPos += 28;
 
----
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(50, 50, 50);
+    
+    const textWidth = pageWidth - 2 * margin;
+    const lines = doc.splitTextToSize(aiGeneratedText, textWidth);
+    
+    lines.forEach((line) => {
+      if (yPos > pageHeight - 60) {
+        doc.addPage();
+        yPos = margin;
+      }
+      doc.text(line, margin, yPos);
+      yPos += 5;
+    });
 
-## 📦 **DATEINAME-FORMAT:**
-```
-Expose_Wohnung_Müllheim_2025-02-26.pdf
+    yPos += 10;
+
+    const allFeatures = [
+      ...propertyData.aussenbereich || [],
+      ...propertyData.innenraum || [],
+      ...propertyData.parkenKeller || [],
+      ...propertyData.technikKomfort || []
+    ];
+
+    if (allFeatures.length > 0) {
+      if (yPos > pageHeight - 80) {
+        doc.addPage();
+        yPos = margin;
+      }
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(darkColor.r, darkColor.g, darkColor.b);
+      doc.text('Ausstattung & Highlights', margin, yPos);
+      yPos += 8;
+
+      const featuresHeight = Math.ceil(allFeatures.length / 2) * 6 + 10;
+      doc.setFillColor(252, 249, 243);
+      doc.roundedRect(margin, yPos, pageWidth - 2 * margin, featuresHeight, 2, 2, 'F');
+      yPos += 7;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(60, 60, 60);
+
+      const columnWidth = (pageWidth - 2 * margin - 10) / 2;
+      let currentColumn = 0;
+      let columnYPos = yPos;
+
+      allFeatures.forEach((feature) => {
+        const xPos = margin + 5 + (currentColumn * (columnWidth + 10));
+        
+        doc.setTextColor(brandColor.r, brandColor.g, brandColor.b);
+        doc.setFont('helvetica', 'bold');
+        doc.text('✓', xPos, columnYPos);
+        
+        doc.setTextColor(60, 60, 60);
+        doc.setFont('helvetica', 'normal');
+        doc.text(feature, xPos + 5, columnYPos);
+        
+        currentColumn++;
+        if (currentColumn >= 2) {
+          currentColumn = 0;
+          columnYPos += 6;
+        }
+      });
+    }
+
+    const addFooter = () => {
+      const footerY = pageHeight - 15;
+      doc.setDrawColor(brandColor.r, brandColor.g, brandColor.b);
+      doc.setLineWidth(0.3);
+      doc.line(margin, footerY - 5, pageWidth - margin, footerY - 5);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(grayColor.r, grayColor.g, grayColor.b);
+      
+      const footerText = 'Erstellt mit Exposé-Profi  •  www.expose-profi.de';
+      doc.text(footerText, pageWidth / 2, footerY, { align: 'center' });
+    };
+
+    const totalPages = doc.internal.pages.length - 1;
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      addFooter();
+    }
+
+    const fileName = `Expose_${propertyData.objekttyp || 'Immobilie'}_${propertyData.ort || 'Objekt'}_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+    
+    console.log('✅ PDF erfolgreich erstellt:', fileName);
+  };
   const getTeaserText = () => {
     if (isUnlocked) {
       return aiGeneratedText;
