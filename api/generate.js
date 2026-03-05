@@ -1,28 +1,19 @@
 // api/generate.js
-// PREMIUM VERSION - Vision mit Foto-Beschriftungen, Silent Expert
+// MONUMENT VERSION - KI recherchiert Lage selbst, Premium-Stil
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
     const apiKey = process.env.OPENAI_API_KEY;
-    
     if (!apiKey) {
       console.error('[ERROR] API-Key fehlt');
-      return res.status(500).json({ 
-        success: false,
-        error: 'API-Key fehlt'
-      });
+      return res.status(500).json({ success: false, error: 'API-Key fehlt' });
     }
 
     const { propertyData, photos, energyCertificate, mode } = req.body;
@@ -32,18 +23,13 @@ export default async function handler(req, res) {
     }
     
     if (!propertyData) {
-      return res.status(400).json({ 
-        success: false,
-        error: 'Keine propertyData'
-      });
+      return res.status(400).json({ success: false, error: 'Keine propertyData' });
     }
 
-    console.log('[OK] PropertyData empfangen');
-    console.log('[INFO] Anzahl Fotos:', photos?.length || 0);
+    console.log('[MONUMENT] PropertyData empfangen');
+    console.log('[MONUMENT] Fotos:', photos?.length || 0);
 
-    const messages = createVisionMessages(propertyData, photos);
-
-    console.log('[START] OpenAI Vision Request (Premium)...');
+    const messages = createMonumentMessages(propertyData, photos);
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -59,12 +45,9 @@ export default async function handler(req, res) {
       })
     });
 
-    console.log('[OK] OpenAI Response Status:', response.status);
-
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('[ERROR] OpenAI Error:', errorData);
-      
+      console.error('[ERROR] OpenAI:', errorData);
       return res.status(response.status).json({
         success: false,
         error: 'OpenAI API Fehler',
@@ -76,14 +59,10 @@ export default async function handler(req, res) {
     const text = data.choices?.[0]?.message?.content;
 
     if (!text) {
-      console.error('[ERROR] Kein Text generiert');
-      return res.status(500).json({
-        success: false,
-        error: 'Kein Text generiert'
-      });
+      return res.status(500).json({ success: false, error: 'Kein Text generiert' });
     }
 
-    console.log('[SUCCESS] Premium Exposé generiert');
+    console.log('[SUCCESS] Monument Exposé generiert');
 
     return res.status(200).json({
       success: true,
@@ -93,20 +72,17 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('[CRITICAL ERROR]', error);
-    
+    console.error('[CRITICAL]', error);
     return res.status(500).json({
       success: false,
       error: 'Server Error',
-      message: error.message || 'Unerwarteter Fehler'
+      message: error.message
     });
   }
 }
 
 async function handleEnergyOCR(apiKey, imageBase64, res) {
   try {
-    console.log('[START] Energieausweis OCR...');
-    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -118,37 +94,23 @@ async function handleEnergyOCR(apiKey, imageBase64, res) {
         messages: [
           {
             role: 'system',
-            content: 'Du bist ein OCR-Spezialist für deutsche Energieausweise. Extrahiere die relevanten Daten präzise.'
+            content: 'OCR-Spezialist für deutsche Energieausweise.'
           },
           {
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: `Analysiere diesen deutschen Energieausweis und extrahiere:
-
+                text: `Extrahiere aus diesem Energieausweis:
 1. Energieeffizienzklasse (A+ bis H)
-2. Energiebedarf in kWh/(m²·a)
-3. Energieträger (Gas, Öl, Fernwärme, Strom, etc.)
-4. Ausweistyp (Bedarfsausweis oder Verbrauchsausweis)
+2. Energiebedarf kWh/(m²·a)
+3. Energieträger
+4. Ausweistyp
 
-Antworte NUR mit JSON:
-{
-  "effizienzklasse": "C",
-  "energiebedarf": "85",
-  "energietraeger": "Gas",
-  "ausweistyp": "Bedarfsausweis"
-}
-
-Bei unlesbaren Werten: null`
+JSON-Format:
+{"effizienzklasse": "C", "energiebedarf": "85", "energietraeger": "Gas", "ausweistyp": "Bedarfsausweis"}`
               },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: imageBase64,
-                  detail: 'high'
-                }
-              }
+              { type: 'image_url', image_url: { url: imageBase64, detail: 'high' } }
             ]
           }
         ],
@@ -158,38 +120,19 @@ Bei unlesbaren Werten: null`
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('[ERROR] OCR failed:', errorData);
-      return res.status(response.status).json({
-        success: false,
-        error: 'OCR fehlgeschlagen'
-      });
+      return res.status(response.status).json({ success: false, error: 'OCR fehlgeschlagen' });
     }
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
 
-    if (!content) {
-      return res.status(500).json({
-        success: false,
-        error: 'Keine OCR-Daten'
-      });
-    }
-
     let extractedData;
     try {
-      const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      extractedData = JSON.parse(cleanContent);
+      const clean = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      extractedData = JSON.parse(clean);
     } catch (e) {
-      console.error('[ERROR] JSON parse failed:', e);
-      return res.status(500).json({
-        success: false,
-        error: 'OCR-Daten konnten nicht geparst werden',
-        rawContent: content
-      });
+      return res.status(500).json({ success: false, error: 'Parse-Fehler' });
     }
-
-    console.log('[SUCCESS] OCR abgeschlossen:', extractedData);
 
     return res.status(200).json({
       success: true,
@@ -198,149 +141,71 @@ Bei unlesbaren Werten: null`
     });
 
   } catch (error) {
-    console.error('[ERROR] OCR Error:', error);
-    return res.status(500).json({
-      success: false,
-      error: 'OCR Error',
-      message: error.message
-    });
+    return res.status(500).json({ success: false, error: 'OCR Error' });
   }
 }
 
-function createVisionMessages(propertyData, photos) {
+function createMonumentMessages(propertyData, photos) {
   const hasPhotos = photos && photos.length > 0;
   
   const systemMessage = {
     role: 'system',
-    content: `Du bist ein Premium-Immobilienmakler, der exklusive Exposés für High-End-Objekte verfasst.
+    content: `Du bist ein Elite-Immobilienmakler für Luxus-Objekte.
 
-${hasPhotos ? `FOTO-ANALYSE MIT BESCHRIFTUNGEN:
-Du erhältst Fotos mit optionalen Beschriftungen (z.B. "Badezimmer", "Küche").
-- Analysiere jedes Foto GENAU
-- Wenn beschriftet: Fokussiere auf diese Kategorie (z.B. bei "Badezimmer" → Armaturen, Fliesen, Sanitär)
-- Beschreibe nur SICHTBARE Details (Materialien, Licht, Qualität)
-- KEINE Fantasie!` : ''}
+${hasPhotos ? `FOTO-ANALYSE:
+- Analysiere jedes Foto mit Label präzise
+- Nur SICHTBARE Details
+- KEINE Fantasie` : ''}
 
-═══════════════════════════════════════
-ABSOLUTE REGELN - "SILENT EXPERT"
-═══════════════════════════════════════
+MONUMENT RULES:
 
-1. HALLEUZINATIONS-SPERRE:
-   ⚠️ Eigennamen (Orte, Straßen) EXAKT übernehmen
-   ⚠️ NIEMALS Ortsnamen verändern oder erfinden
-   ⚠️ NIEMALS Straßennamen erfinden
-   ⚠️ Bei fehlenden Daten: [WERT PRÜFEN]
-
-2. KEINE STRUKTUR-LABELS IM TEXT:
-   ❌ NIEMALS schreiben: "Headline:", "Einleitung:", "Fazit:", "Lage:", etc.
-   ✅ Fließender Text OHNE Meta-Bezeichnungen
-
-3. PREMIUM-STIL:
-   - Exklusiv, elegant, verkaufsstark
-   - Keine Floskeln ("Zögern Sie nicht")
-   - Sachlich-emotional balanciert
-   - High-End Vokabular
-
-4. EXPOSÉ-STRUKTUR (ohne Labels im Text!):
+1. LAGE-INTELLIGENZ:
+   ⚠️ Nutzer gibt NUR PLZ und Ort
+   ✅ DU generierst die Umgebungsbeschreibung
+   ✅ Nutze allgemeines Wissen über die Region
+   ✅ Infrastruktur, Anbindung, Charakter
+   ✅ KEINE Fantasie-Straßen
    
-   A) CATCHY HEADLINE (1 Zeile)
-      - Emotional, konkret, verkaufsstark
-      - Beispiel: "Lichtdurchflutete Designer-Wohnung mit Panoramablick"
+2. EIGENNAMEN:
+   ⚠️ PLZ und Ort EXAKT übernehmen
    
-   B) EMOTIONALE EINLEITUNG (2-3 Sätze)
-      - Wohngefühl, Lifestyle
-      - Beginne direkt, ohne "Einleitung:"
-   
-   C) OBJEKTBESCHREIBUNG (4-6 Sätze)
-      - Räume, Materialien, Licht
-      ${hasPhotos ? '- Konkrete Details von Fotos' : ''}
-      - Fließend erzählen
-   
-   D) LAGEBESCHREIBUNG (3-4 Sätze)
-      - EXAKT den angegebenen Ort nutzen
-      - Infrastruktur, Anbindung allgemein
-      - KEINE erfundenen Straßen!
-   
-   E) AUSSTATTUNGSTABELLE (formatiert)
-      - Nutze strukturierte Aufzählung
-      - Format: "✓ Feature"
-   
-   F) RECHTLICHE HINWEISE
-      - Energiepass-Daten sachlich
-      - GEG-Konformität
+3. KEINE LABELS:
+   ❌ NIEMALS: "Headline:", "Fazit:", "Einleitung:"
+   ✅ Fließender Premium-Text
 
-Schreibe ein FLÜSSIGES, labelfreies Exposé!`
+4. STRUKTUR (ohne Labels!):
+   1. HEADLINE (1 Zeile, emotional)
+   2. EINLEITUNG (2-3 Sätze)
+   3. OBJEKT (4-6 Sätze)
+   4. LAGE (3-4 Sätze - RECHERCHIERE!)
+   5. AUSSTATTUNG (✓ Liste)
+   6. ENERGIE
+   7. KONTAKT (1-2 Sätze)
+
+Premium-Stil: Exklusiv, elegant, verkaufsstark!`
   };
 
-  const userContent = [];
-  
-  userContent.push({
+  const userContent = [{
     type: 'text',
-    text: createPremiumPrompt(propertyData, hasPhotos)
-  });
+    text: createMonumentPrompt(propertyData, hasPhotos)
+  }];
 
   if (hasPhotos) {
     photos.forEach((photo) => {
-      userContent.push({
-        type: 'image_url',
-        image_url: {
-          url: photo.base64,
-          detail: 'high'
-        }
-      });
-      
-      // Foto-Beschriftung als Kontext
+      userContent.push({ type: 'image_url', image_url: { url: photo.base64, detail: 'high' } });
       if (photo.label) {
-        userContent.push({
-          type: 'text',
-          text: `📸 Dieses Foto zeigt: ${photo.label}`
-        });
+        userContent.push({ type: 'text', text: `📸 ${photo.label}` });
       }
     });
   }
 
-  return [
-    systemMessage,
-    {
-      role: 'user',
-      content: userContent
-    }
-  ];
+  return [systemMessage, { role: 'user', content: userContent }];
 }
 
-function createPremiumPrompt(data, hasPhotos) {
-  // EXAKTE Übernahme aller Daten
-  const objekttyp = data.objekttyp || '[OBJEKTTYP PRÜFEN]';
-  const vermarktungsart = data.vermarktungsart || '[VERMARKTUNG PRÜFEN]';
-  const wohnflaeche = data.wohnflaeche || '[WOHNFLÄCHE PRÜFEN]';
-  const nutzflaeche = data.nutzflaeche || '';
-  const grundstueck = data.grundstueck || '';
-  const zimmer = data.zimmer || '[ZIMMER PRÜFEN]';
-  const schlafzimmer = data.schlafzimmer || '';
-  const baeder = data.baeder || '';
-  const balkone = data.balkone || '';
-  const baujahr = data.baujahr || '[BAUJAHR PRÜFEN]';
-  const sanierung = data.sanierung || '';
-  const heizung = data.heizung || '';
-  const keller = data.keller || '';
-  const stellplaetze = data.stellplaetze || '';
-  const zustand = data.zustand || '[ZUSTAND PRÜFEN]';
-  const preis = data.preis || '[PREIS PRÜFEN]';
+function createMonumentPrompt(data, hasPhotos) {
   const plz = data.plz || '';
   const ort = data.ort || '';
-  const umgebung = data.umgebung || '';
-  
-  // EXAKTE Lage
-  let lageInfo = '';
-  if (plz && ort) {
-    lageInfo = `${ort} (PLZ ${plz})`;
-  } else if (ort) {
-    lageInfo = ort;
-  } else if (plz) {
-    lageInfo = `PLZ ${plz}`;
-  } else {
-    lageInfo = '[LAGE PRÜFEN]';
-  }
+  const lageInfo = (plz && ort) ? `${ort} (PLZ ${plz})` : (ort || plz || '[LAGE PRÜFEN]');
 
   const features = [
     ...data.aussenbereich || [],
@@ -348,118 +213,35 @@ function createPremiumPrompt(data, hasPhotos) {
     ...data.parkenKeller || [],
     ...data.technikKomfort || []
   ];
-  
-  const ausstattungText = features.length > 0 
-    ? features.map(f => `- ${f}`).join('\n')
-    : '[AUSSTATTUNG PRÜFEN]';
 
-  const energieInfo = data.effizienzklasse 
-    ? `Energieeffizienzklasse: ${data.effizienzklasse}\nEnergiebedarf: ${data.energiebedarf || '[WERT PRÜFEN]'} kWh/(m²·a)\nEnergieträger: ${data.energietraeger || '[TRÄGER PRÜFEN]'}`
-    : '[ENERGIEAUSWEIS PRÜFEN - GEG-PFLICHT!]';
+  return `${hasPhotos ? '🖼️ FOTOS ERHALTEN\n\n' : ''}MONUMENT-EXPOSÉ erstellen:
 
-  return `${hasPhotos ? '🖼️ FOTOS MITGESCHICKT - ANALYSIERE JEDES EINZELN!\n\n' : ''}Erstelle ein PREMIUM-EXPOSÉ für dieses exklusive Objekt:
+OBJEKT:
+${data.objekttyp || '[TYP]'} | ${data.vermarktungsart || '[ART]'} | ${data.preis ? data.preis + ' €' : '[PREIS]'}
 
-═══════════════════════════════════════
-OBJEKTDATEN (EXAKT ÜBERNEHMEN!)
-═══════════════════════════════════════
-
-BASISDATEN:
-Objekttyp: ${objekttyp}
-Vermarktungsart: ${vermarktungsart}
-${vermarktungsart === 'Verkauf' ? 'Kaufpreis' : 'Kaltmiete'}: ${preis}${preis !== '[PREIS PRÜFEN]' ? ' €' : ''}
-
-LAGE (EXAKT SO!):
+LAGE (RECHERCHIERE!):
 ${lageInfo}
-${umgebung ? `Umgebung: ${umgebung}` : ''}
-⚠️ Nutze NUR: "${lageInfo}" - keine Fantasie-Straßen!
+⚠️ Generiere Umgebungsbeschreibung basierend auf "${lageInfo}"
+${data.weiteresBesonderheiten ? `Besonderheiten: ${data.weiteresBesonderheiten}` : ''}
 
 FLÄCHEN:
-Wohnfläche: ${wohnflaeche} m²${nutzflaeche ? `\nNutzfläche: ${nutzflaeche} m²` : ''}${grundstueck ? `\nGrundstück: ${grundstueck} m²` : ''}
+Wohnen: ${data.wohnflaeche || '[?]'} m²${data.nutzflaeche ? ` | Nutzen: ${data.nutzflaeche} m²` : ''}${data.grundstueck ? ` | Grundstück: ${data.grundstueck} m²` : ''}
 
 RÄUME:
-Zimmer: ${zimmer}${schlafzimmer ? `\nSchlafzimmer: ${schlafzimmer}` : ''}${baeder ? `\nBäder: ${baeder}` : ''}${balkone ? `\nBalkone: ${balkone}` : ''}
+${data.zimmer || '[?]'} Zi${data.schlafzimmer ? ` | ${data.schlafzimmer} Schlafz` : ''}${data.baeder ? ` | ${data.baeder} Bäder` : ''}${data.balkone ? ` | ${data.balkone} Balkone` : ''}
 
-ZUSTAND & TECHNIK:
-Baujahr: ${baujahr}${sanierung ? `\nLetzte Sanierung: ${sanierung}` : ''}
-Zustand: ${zustand}${heizung ? `\nHeizung: ${heizung}` : ''}${keller ? `\nKeller: ${keller}` : ''}${stellplaetze ? `\nStellplätze: ${stellplaetze}` : ''}
+ZUSTAND:
+Bj: ${data.baujahr || '[?]'}${data.sanierung ? ` | San: ${data.sanierung}` : ''} | ${data.zustand || '[?]'}${data.heizung ? ` | ${data.heizung}` : ''}${data.keller ? ` | Keller: ${data.keller}` : ''}${data.stellplaetze ? ` | ${data.stellplaetze} Stellpl` : ''}
 
 AUSSTATTUNG:
-${ausstattungText}
+${features.length > 0 ? features.map(f => `- ${f}`).join('\n') : '[KEINE]'}
 
 ENERGIE:
-${energieInfo}
+${data.effizienzklasse ? `${data.effizienzklasse} | ${data.energiebedarf || '?'} kWh/(m²·a) | ${data.energietraeger || '?'}` : '[GEG-PFLICHT!]'}
 
-${data.weiteresBesonderheiten ? `BESONDERHEITEN:\n${data.weiteresBesonderheiten}` : ''}
+${hasPhotos ? `📸 ${data.uploadedPhotosCount || '?'} Foto(s)\n` : ''}
+Schreibe Monument-Exposé (500-700 Wörter):
+1. Headline, 2. Einleitung, 3. Objekt, 4. LAGE (recherchiere!), 5. Ausstattung ✓, 6. Energie, 7. Kontakt
 
-${hasPhotos ? `═══════════════════════════════════════
-📸 FOTO-ANALYSE
-═══════════════════════════════════════
-
-Du hast ${data.uploadedPhotosCount || 'mehrere'} Foto(s).
-
-ANALYSIERE JEDES FOTO:
-- Materialien (Parkett, Fliesen, Marmor, etc.)
-- Lichtverhältnisse
-- Raumwirkung
-- Ausstattungsqualität
-- Besondere Details
-
-BESCHRIFTETE FOTOS:
-Falls ein Foto beschriftet ist (z.B. "Badezimmer"):
-→ Fokussiere auf diese Kategorie
-→ Beschreibe spezifische Details (Armaturen, Fliesen, etc.)
-
-WICHTIG: Nur SICHTBARE Details!
-
-` : ''}═══════════════════════════════════════
-AUFGABE - PREMIUM-EXPOSÉ
-═══════════════════════════════════════
-
-Erstelle ein fließendes Exposé MIT DIESER STRUKTUR (aber OHNE Labels im Text!):
-
-1. CATCHY HEADLINE
-   - Eine emotionale, verkaufsstarke Zeile
-   - Direkt beginnen, ohne "Headline:"
-
-2. EMOTIONALE EINLEITUNG
-   - Lifestyle, Wohngefühl
-   - 2-3 Sätze, fließend
-
-3. OBJEKTBESCHREIBUNG
-   - Räume, Materialien
-   ${hasPhotos ? '- Details von Fotos' : ''}
-   - 4-6 Sätze, elegant
-
-4. LAGE
-   - Nutze EXAKT: "${lageInfo}"
-   ${umgebung ? `- Erwähne: ${umgebung}` : ''}
-   - Allgemeine Vorzüge
-   - 3-4 Sätze
-
-5. AUSSTATTUNG
-   - Formatierte Liste mit ✓
-   - Features klar aufzählen
-
-6. ENERGIE & RECHTLICHES
-   - Energiepass sachlich
-   - GEG-Hinweis
-
-7. KONTAKT-EINLADUNG
-   - Elegant, ohne Floskeln
-   - 1-2 Sätze
-
-═══════════════════════════════════════
-ABSOLUTE VERBOTE
-═══════════════════════════════════════
-
-❌ Labels: "Headline:", "Fazit:", "Einleitung:"
-❌ Floskeln: "Zögern Sie nicht"
-❌ Ortsnamen verändern
-❌ Straßennamen erfinden
-
-✓ Fließendes Premium-Exposé
-✓ 500-700 Wörter
-✓ EXAKTE Datennutzung
-
-BEGINNE JETZT mit dem fertigen Exposé (OHNE Meta-Labels!):`;
+❌ Keine Labels! ✅ Premium-Stil!`;
 }
