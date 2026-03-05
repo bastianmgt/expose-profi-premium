@@ -1,5 +1,5 @@
 // api/generate.js
-// KORRIGIERTE VERSION - Keine Fantasie, keine Labels, strikte Datennutzung
+// PREMIUM VERSION - Vision mit Foto-Beschriftungen, Silent Expert
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -43,7 +43,7 @@ export default async function handler(req, res) {
 
     const messages = createVisionMessages(propertyData, photos);
 
-    console.log('[START] OpenAI Vision Request...');
+    console.log('[START] OpenAI Vision Request (Premium)...');
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -54,7 +54,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: 'gpt-4o',
         messages: messages,
-        max_tokens: 2000,
+        max_tokens: 2500,
         temperature: 0.7
       })
     });
@@ -83,7 +83,7 @@ export default async function handler(req, res) {
       });
     }
 
-    console.log('[SUCCESS] Exposé mit Bildanalyse generiert');
+    console.log('[SUCCESS] Premium Exposé generiert');
 
     return res.status(200).json({
       success: true,
@@ -118,21 +118,21 @@ async function handleEnergyOCR(apiKey, imageBase64, res) {
         messages: [
           {
             role: 'system',
-            content: 'Du bist ein OCR-Spezialist für deutsche Energieausweise. Extrahiere die relevanten Daten und gib sie als JSON zurück.'
+            content: 'Du bist ein OCR-Spezialist für deutsche Energieausweise. Extrahiere die relevanten Daten präzise.'
           },
           {
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: `Analysiere diesen deutschen Energieausweis und extrahiere folgende Informationen:
+                text: `Analysiere diesen deutschen Energieausweis und extrahiere:
 
 1. Energieeffizienzklasse (A+ bis H)
 2. Energiebedarf in kWh/(m²·a)
-3. Energieträger (z.B. Gas, Öl, Fernwärme, Strom)
+3. Energieträger (Gas, Öl, Fernwärme, Strom, etc.)
 4. Ausweistyp (Bedarfsausweis oder Verbrauchsausweis)
 
-Antworte NUR mit einem JSON-Objekt in diesem Format:
+Antworte NUR mit JSON:
 {
   "effizienzklasse": "C",
   "energiebedarf": "85",
@@ -140,7 +140,7 @@ Antworte NUR mit einem JSON-Objekt in diesem Format:
   "ausweistyp": "Bedarfsausweis"
 }
 
-Wenn ein Wert nicht eindeutig lesbar ist, setze null.`
+Bei unlesbaren Werten: null`
               },
               {
                 type: 'image_url',
@@ -212,70 +212,90 @@ function createVisionMessages(propertyData, photos) {
   
   const systemMessage = {
     role: 'system',
-    content: `Du bist ein professioneller Immobilienmakler, der verkaufsstarke Exposé-Texte schreibt.
+    content: `Du bist ein Premium-Immobilienmakler, der exklusive Exposés für High-End-Objekte verfasst.
 
-${hasPhotos ? `Du hast Zugriff auf Fotos der Immobilie. Analysiere sie aktiv und beziehe Details ein:
-- Materialien und Oberflächen (Parkett, Fliesen, etc.)
-- Lichtverhältnisse und Helligkeit
-- Raumaufteilung und Größenwirkung
-- Ausstattungsqualität
-- Besondere architektonische Details
+${hasPhotos ? `FOTO-ANALYSE MIT BESCHRIFTUNGEN:
+Du erhältst Fotos mit optionalen Beschriftungen (z.B. "Badezimmer", "Küche").
+- Analysiere jedes Foto GENAU
+- Wenn beschriftet: Fokussiere auf diese Kategorie (z.B. bei "Badezimmer" → Armaturen, Fliesen, Sanitär)
+- Beschreibe nur SICHTBARE Details (Materialien, Licht, Qualität)
+- KEINE Fantasie!` : ''}
 
-WICHTIG: Nutze nur Details, die du auf den Bildern WIRKLICH siehst. Keine Fantasie!` : ''}
+═══════════════════════════════════════
+ABSOLUTE REGELN - "SILENT EXPERT"
+═══════════════════════════════════════
 
-ABSOLUTE REGELN - NIEMALS VERLETZEN:
-
-1. STRIKTE DATENNUTZUNG:
-   - Nutze Ort und PLZ EXAKT wie angegeben
-   - Verändere KEINEN Buchstaben an Eigennamen
-   - Erfinde KEINE Straßennamen oder Stadtteilnamen
-   - Bei fehlenden Daten: Platzhalter [WERT PRÜFEN]
+1. HALLEUZINATIONS-SPERRE:
+   ⚠️ Eigennamen (Orte, Straßen) EXAKT übernehmen
+   ⚠️ NIEMALS Ortsnamen verändern oder erfinden
+   ⚠️ NIEMALS Straßennamen erfinden
+   ⚠️ Bei fehlenden Daten: [WERT PRÜFEN]
 
 2. KEINE STRUKTUR-LABELS IM TEXT:
-   - Schreibe NIEMALS Wörter wie: "Überschrift:", "Einleitung:", "Fazit:", "Call-to-Action:", "Lage:", "Ausstattung:" etc.
-   - Der Text muss ein FLÜSSIGES Exposé sein, OHNE Meta-Bezeichnungen
-   - Beginne direkt mit dem Inhalt, nicht mit Labels
+   ❌ NIEMALS schreiben: "Headline:", "Einleitung:", "Fazit:", "Lage:", etc.
+   ✅ Fließender Text OHNE Meta-Bezeichnungen
 
-3. STIL - SACHLICH-ELEGANT:
-   - Keine Floskeln wie "Zögern Sie nicht länger", "Lassen Sie sich diese Gelegenheit nicht entgehen"
-   - Keine übertriebenen Superlativen
-   - Sachlich, präzise, verkaufsstark
-   - Professionell ohne Marktschreier-Ton
+3. PREMIUM-STIL:
+   - Exklusiv, elegant, verkaufsstark
+   - Keine Floskeln ("Zögern Sie nicht")
+   - Sachlich-emotional balanciert
+   - High-End Vokabular
 
-4. STRUKTUR (OHNE LABELS):
-   - Eröffnungssatz (direkt, ohne "Einleitung:")
-   - Objektbeschreibung (fließend)
-   - Lagebeschreibung (fließend)
-   - Ausstattungsdetails (natürlich integriert)
-   - Abschlusssatz mit Kontaktmöglichkeit (ohne "Fazit:")
+4. EXPOSÉ-STRUKTUR (ohne Labels im Text!):
+   
+   A) CATCHY HEADLINE (1 Zeile)
+      - Emotional, konkret, verkaufsstark
+      - Beispiel: "Lichtdurchflutete Designer-Wohnung mit Panoramablick"
+   
+   B) EMOTIONALE EINLEITUNG (2-3 Sätze)
+      - Wohngefühl, Lifestyle
+      - Beginne direkt, ohne "Einleitung:"
+   
+   C) OBJEKTBESCHREIBUNG (4-6 Sätze)
+      - Räume, Materialien, Licht
+      ${hasPhotos ? '- Konkrete Details von Fotos' : ''}
+      - Fließend erzählen
+   
+   D) LAGEBESCHREIBUNG (3-4 Sätze)
+      - EXAKT den angegebenen Ort nutzen
+      - Infrastruktur, Anbindung allgemein
+      - KEINE erfundenen Straßen!
+   
+   E) AUSSTATTUNGSTABELLE (formatiert)
+      - Nutze strukturierte Aufzählung
+      - Format: "✓ Feature"
+   
+   F) RECHTLICHE HINWEISE
+      - Energiepass-Daten sachlich
+      - GEG-Konformität
 
-BEISPIEL RICHTIG:
-"Diese moderne 3-Zimmer-Wohnung in Müllheim überzeugt durch ihre hochwertige Ausstattung und zentrale Lage. Die 85 m² Wohnfläche verteilen sich..."
-
-BEISPIEL FALSCH:
-"Überschrift: Moderne Wohnung in Müllheim
-Einleitung: Diese Wohnung...
-Fazit: Kontaktieren Sie uns..."
-
-Schreibe NUR den fertigen Text, OHNE Meta-Struktur!`
+Schreibe ein FLÜSSIGES, labelfreies Exposé!`
   };
 
   const userContent = [];
   
   userContent.push({
     type: 'text',
-    text: createDetailedPrompt(propertyData, hasPhotos)
+    text: createPremiumPrompt(propertyData, hasPhotos)
   });
 
   if (hasPhotos) {
-    photos.forEach((photoBase64) => {
+    photos.forEach((photo) => {
       userContent.push({
         type: 'image_url',
         image_url: {
-          url: photoBase64,
+          url: photo.base64,
           detail: 'high'
         }
       });
+      
+      // Foto-Beschriftung als Kontext
+      if (photo.label) {
+        userContent.push({
+          type: 'text',
+          text: `📸 Dieses Foto zeigt: ${photo.label}`
+        });
+      }
     });
   }
 
@@ -288,18 +308,29 @@ Schreibe NUR den fertigen Text, OHNE Meta-Struktur!`
   ];
 }
 
-function createDetailedPrompt(data, hasPhotos) {
+function createPremiumPrompt(data, hasPhotos) {
+  // EXAKTE Übernahme aller Daten
   const objekttyp = data.objekttyp || '[OBJEKTTYP PRÜFEN]';
   const vermarktungsart = data.vermarktungsart || '[VERMARKTUNG PRÜFEN]';
-  const wohnflaeche = data.wohnflaeche || '[FLÄCHE PRÜFEN]';
+  const wohnflaeche = data.wohnflaeche || '[WOHNFLÄCHE PRÜFEN]';
+  const nutzflaeche = data.nutzflaeche || '';
+  const grundstueck = data.grundstueck || '';
   const zimmer = data.zimmer || '[ZIMMER PRÜFEN]';
+  const schlafzimmer = data.schlafzimmer || '';
+  const baeder = data.baeder || '';
+  const balkone = data.balkone || '';
   const baujahr = data.baujahr || '[BAUJAHR PRÜFEN]';
+  const sanierung = data.sanierung || '';
+  const heizung = data.heizung || '';
+  const keller = data.keller || '';
+  const stellplaetze = data.stellplaetze || '';
   const zustand = data.zustand || '[ZUSTAND PRÜFEN]';
   const preis = data.preis || '[PREIS PRÜFEN]';
   const plz = data.plz || '';
   const ort = data.ort || '';
+  const umgebung = data.umgebung || '';
   
-  // EXAKTE Übernahme von PLZ und Ort
+  // EXAKTE Lage
   let lageInfo = '';
   if (plz && ort) {
     lageInfo = `${ort} (PLZ ${plz})`;
@@ -326,89 +357,109 @@ function createDetailedPrompt(data, hasPhotos) {
     ? `Energieeffizienzklasse: ${data.effizienzklasse}\nEnergiebedarf: ${data.energiebedarf || '[WERT PRÜFEN]'} kWh/(m²·a)\nEnergieträger: ${data.energietraeger || '[TRÄGER PRÜFEN]'}`
     : '[ENERGIEAUSWEIS PRÜFEN - GEG-PFLICHT!]';
 
-  return `${hasPhotos ? '🖼️ ICH HABE DIR FOTOS MITGESCHICKT - ANALYSIERE SIE GENAU!\n\n' : ''}Erstelle ein professionelles Immobilien-Exposé mit folgenden EXAKTEN Daten:
+  return `${hasPhotos ? '🖼️ FOTOS MITGESCHICKT - ANALYSIERE JEDES EINZELN!\n\n' : ''}Erstelle ein PREMIUM-EXPOSÉ für dieses exklusive Objekt:
 
 ═══════════════════════════════════════
 OBJEKTDATEN (EXAKT ÜBERNEHMEN!)
 ═══════════════════════════════════════
 
+BASISDATEN:
 Objekttyp: ${objekttyp}
 Vermarktungsart: ${vermarktungsart}
-Wohnfläche: ${wohnflaeche} m²
-Zimmer: ${zimmer}
-Baujahr: ${baujahr}
-Zustand: ${zustand}
 ${vermarktungsart === 'Verkauf' ? 'Kaufpreis' : 'Kaltmiete'}: ${preis}${preis !== '[PREIS PRÜFEN]' ? ' €' : ''}
 
-LAGE (EXAKT SO VERWENDEN!):
+LAGE (EXAKT SO!):
 ${lageInfo}
-⚠️ WICHTIG: Verändere KEINEN Buchstaben am Ortsnamen!
-⚠️ Erfinde KEINE Straßennamen oder Stadtteilnamen!
-⚠️ Nutze nur: "${lageInfo}" - sonst nichts!
+${umgebung ? `Umgebung: ${umgebung}` : ''}
+⚠️ Nutze NUR: "${lageInfo}" - keine Fantasie-Straßen!
+
+FLÄCHEN:
+Wohnfläche: ${wohnflaeche} m²${nutzflaeche ? `\nNutzfläche: ${nutzflaeche} m²` : ''}${grundstueck ? `\nGrundstück: ${grundstueck} m²` : ''}
+
+RÄUME:
+Zimmer: ${zimmer}${schlafzimmer ? `\nSchlafzimmer: ${schlafzimmer}` : ''}${baeder ? `\nBäder: ${baeder}` : ''}${balkone ? `\nBalkone: ${balkone}` : ''}
+
+ZUSTAND & TECHNIK:
+Baujahr: ${baujahr}${sanierung ? `\nLetzte Sanierung: ${sanierung}` : ''}
+Zustand: ${zustand}${heizung ? `\nHeizung: ${heizung}` : ''}${keller ? `\nKeller: ${keller}` : ''}${stellplaetze ? `\nStellplätze: ${stellplaetze}` : ''}
 
 AUSSTATTUNG:
 ${ausstattungText}
 
-ENERGETISCHE DATEN:
+ENERGIE:
 ${energieInfo}
 
-${data.weiteresBesonderheiten ? `WEITERE BESONDERHEITEN:\n${data.weiteresBesonderheiten}` : ''}
+${data.weiteresBesonderheiten ? `BESONDERHEITEN:\n${data.weiteresBesonderheiten}` : ''}
 
 ${hasPhotos ? `═══════════════════════════════════════
-📸 BILDANALYSE
+📸 FOTO-ANALYSE
 ═══════════════════════════════════════
 
 Du hast ${data.uploadedPhotosCount || 'mehrere'} Foto(s).
 
-ANALYSIERE: Materialien, Licht, Raumwirkung, Ausstattung, besondere Details.
-INTEGRIERE diese Beobachtungen NATÜRLICH in den Text!
+ANALYSIERE JEDES FOTO:
+- Materialien (Parkett, Fliesen, Marmor, etc.)
+- Lichtverhältnisse
+- Raumwirkung
+- Ausstattungsqualität
+- Besondere Details
+
+BESCHRIFTETE FOTOS:
+Falls ein Foto beschriftet ist (z.B. "Badezimmer"):
+→ Fokussiere auf diese Kategorie
+→ Beschreibe spezifische Details (Armaturen, Fliesen, etc.)
+
+WICHTIG: Nur SICHTBARE Details!
 
 ` : ''}═══════════════════════════════════════
-AUFGABE - FLÜSSIGES EXPOSÉ SCHREIBEN
+AUFGABE - PREMIUM-EXPOSÉ
 ═══════════════════════════════════════
 
-Schreibe ein verkaufsstarkes Exposé MIT DIESER STRUKTUR (aber OHNE die Labels im Text!):
+Erstelle ein fließendes Exposé MIT DIESER STRUKTUR (aber OHNE Labels im Text!):
 
-1. Eröffnungssatz
-   - Beginne direkt, sachlich-elegant
-   - Erwähne Objekttyp, Lage (EXAKT: "${lageInfo}"), Größe
+1. CATCHY HEADLINE
+   - Eine emotionale, verkaufsstarke Zeile
+   - Direkt beginnen, ohne "Headline:"
 
-2. Objektbeschreibung
-   - Räume, Wohngefühl
-   ${hasPhotos ? '- Beschreibe was du auf Bildern siehst (Materialien, Licht)' : ''}
-   - Fließend, ohne "Objektbeschreibung:" zu schreiben!
+2. EMOTIONALE EINLEITUNG
+   - Lifestyle, Wohngefühl
+   - 2-3 Sätze, fließend
 
-3. Lage-Information
-   - Nutze NUR: "${lageInfo}"
-   - Beschreibe Vorzüge allgemein (Infrastruktur, Anbindung)
-   - KEINE erfundenen Straßennamen!
+3. OBJEKTBESCHREIBUNG
+   - Räume, Materialien
+   ${hasPhotos ? '- Details von Fotos' : ''}
+   - 4-6 Sätze, elegant
 
-4. Ausstattung
-   - Integriere Features natürlich
-   - Keine Aufzählungen mit "Ausstattung:" davor!
+4. LAGE
+   - Nutze EXAKT: "${lageInfo}"
+   ${umgebung ? `- Erwähne: ${umgebung}` : ''}
+   - Allgemeine Vorzüge
+   - 3-4 Sätze
 
-5. Energiedaten
-   - Erwähne Werte sachlich
-   - Ohne "Energiedaten:" Label!
+5. AUSSTATTUNG
+   - Formatierte Liste mit ✓
+   - Features klar aufzählen
 
-6. Preis & Kontakt
-   - Preis nennen
-   - Einladung zur Besichtigung
-   - OHNE "Fazit:" oder "Call-to-Action:" Label!
+6. ENERGIE & RECHTLICHES
+   - Energiepass sachlich
+   - GEG-Hinweis
+
+7. KONTAKT-EINLADUNG
+   - Elegant, ohne Floskeln
+   - 1-2 Sätze
 
 ═══════════════════════════════════════
 ABSOLUTE VERBOTE
 ═══════════════════════════════════════
 
-❌ NIEMALS schreiben: "Überschrift:", "Einleitung:", "Fazit:", "Call-to-Action:", "Lage:", "Ausstattung:"
-❌ NIEMALS Floskeln: "Zögern Sie nicht", "Lassen Sie sich diese Gelegenheit nicht entgehen"
-❌ NIEMALS Ortsnamen verändern oder erfinden
-❌ NIEMALS Straßennamen oder Stadtteile erfinden
+❌ Labels: "Headline:", "Fazit:", "Einleitung:"
+❌ Floskeln: "Zögern Sie nicht"
+❌ Ortsnamen verändern
+❌ Straßennamen erfinden
 
-✓ Schreibe ein FLÜSSIGES, elegantes Exposé
-✓ Sachlich-verkaufsstark, ohne Marktschreier-Ton
+✓ Fließendes Premium-Exposé
+✓ 500-700 Wörter
 ✓ EXAKTE Datennutzung
-✓ Ca. 400-500 Wörter
 
-Beginne JETZT mit dem fertigen Exposé-Text (OHNE Meta-Labels!):`;
+BEGINNE JETZT mit dem fertigen Exposé (OHNE Meta-Labels!):`;
 }
