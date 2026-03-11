@@ -3,10 +3,47 @@ import {
   Sparkles, Upload, X, Check, Loader2, Download, Eye, Mail,
   Clock, Zap, Shield, Home, Ruler, BedDouble, Bath, Calendar,
   Flame, Car, Image as ImageIcon, CreditCard, Lock, Unlock,
-  ChevronDown, CheckCircle, Star
+  ChevronDown, CheckCircle, Star, Scale, Building, RotateCcw,
+  AlertCircle, CheckCircle2, XCircle, Info
 } from 'lucide-react';
 
-export default function ExposeProfiMonument() {
+// Toast Notification Component
+function Toast({ message, type = 'info', onClose }) {
+  const icons = {
+    success: <CheckCircle2 className="w-5 h-5 text-green-500" />,
+    error: <XCircle className="w-5 h-5 text-red-500" />,
+    info: <Info className="w-5 h-5 text-blue-500" />,
+    warning: <AlertCircle className="w-5 h-5 text-amber-500" />
+  };
+
+  const colors = {
+    success: 'bg-green-50 border-green-200',
+    error: 'bg-red-50 border-red-200',
+    info: 'bg-blue-50 border-blue-200',
+    warning: 'bg-amber-50 border-amber-200'
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(onClose, 5000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div className={`fixed top-4 right-4 z-50 ${colors[type]} border-2 rounded-xl p-4 shadow-2xl max-w-md animate-slide-in`}>
+      <div className="flex items-start space-x-3">
+        {icons[type]}
+        <div className="flex-1">
+          <p className="text-sm font-medium text-gray-900">{message}</p>
+        </div>
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default function ExposeProfiUltimate() {
   const [propertyData, setPropertyData] = useState({
     objekttyp: '', vermarktungsart: '', preis: '', plz: '', ort: '',
     wohnflaeche: '', nutzflaeche: '', grundstueck: '', zimmer: '',
@@ -14,13 +51,16 @@ export default function ExposeProfiMonument() {
     heizung: '', keller: '', stellplaetze: '', zustand: '',
     weiteresBesonderheiten: '',
     aussenbereich: [], innenraum: [], parkenKeller: [], technikKomfort: [],
-    ausweistyp: '', energiebedarf: '', energietraeger: '', effizienzklasse: ''
+    ausweistyp: '', energiebedarf: '', energietraeger: '', effizienzklasse: '',
+    denkmalschutz: 'Nein', erbpacht: 'Nein', einliegerwohnung: 'Nein',
+    hausgeld: '', provision: '', provisionspflichtig: 'Nein', verfuegbarAb: ''
   });
 
   const [uploadedPhotos, setUploadedPhotos] = useState([]);
   const [uploadedLogo, setUploadedLogo] = useState(null);
   const [uploadedEnergyCert, setUploadedEnergyCert] = useState(null);
   const [aiGeneratedText, setAiGeneratedText] = useState('');
+  const [editableText, setEditableText] = useState(''); // NEU: Editierbarer Text
   const [isGenerating, setIsGenerating] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
@@ -29,11 +69,29 @@ export default function ExposeProfiMonument() {
   const [isDragging, setIsDragging] = useState(false);
   const [betaEmail, setBetaEmail] = useState('');
   const [betaSubmitted, setBetaSubmitted] = useState(false);
+  const [selectedTonality, setSelectedTonality] = useState('professional'); // NEU
+  const [isTextEdited, setIsTextEdited] = useState(false); // NEU
+  const [showRestoreBanner, setShowRestoreBanner] = useState(false); // NEU
+  const [toast, setToast] = useState(null); // NEU: Toast State
   
   const photoInputRef = useRef(null);
   const logoInputRef = useRef(null);
   const energyInputRef = useRef(null);
   const studioRef = useRef(null);
+
+  const objekttypen = [
+    '--- Wohnimmobilien ---',
+    'Einfamilienhaus (freistehend)', 'Doppelhaushälfte', 'Reihenhaus (Mittelhaus)',
+    'Reihenhaus (Endhaus)', 'Bungalow', 'Villa', 'Stadthaus', 'Mehrfamilienhaus',
+    'Zweifamilienhaus', 'Wohnung', 'Maisonette', 'Penthouse', 'Dachgeschosswohnung',
+    'Souterrain', 'Loft', 'Apartment',
+    '--- Gewerbe ---',
+    'Bürogebäude', 'Ladenlokal', 'Gastronomiebetrieb', 'Halle/Lager',
+    'Praxisfläche', 'Werkstatt', 'Hotel/Pension',
+    '--- Grundstücke & Sonstiges ---',
+    'Baugrundstück', 'Gewerbegrundstück', 'Resthof', 'Bauernhof',
+    'Wohn- und Geschäftshaus', 'Atelierwohnung', 'Apartment-Haus'
+  ];
 
   const features = {
     aussenbereich: ['Balkon', 'Terrasse', 'Garten', 'Dachterrasse', 'Loggia', 'Wintergarten', 'Pool', 'Sauna'],
@@ -42,11 +100,80 @@ export default function ExposeProfiMonument() {
     technikKomfort: ['Aufzug', 'Barrierefrei', 'Smart Home', 'Klimaanlage', 'Photovoltaik', 'Wärmepumpe', 'Videosprechanlage', 'Alarmanlage', 'Rollläden elektrisch', 'Zentralstaubsauger']
   };
 
+  // NEU: Toast Helper
+  const showToast = (message, type = 'info') => {
+    setToast({ message, type });
+  };
+
+  // NEU: localStorage Auto-Save
+  useEffect(() => {
+    const saveInterval = setInterval(() => {
+      const dataToSave = {
+        propertyData,
+        uploadedPhotos: uploadedPhotos.map(p => ({ id: p.id, name: p.name, base64: p.base64, label: p.label })),
+        aiGeneratedText,
+        editableText,
+        timestamp: new Date().toISOString()
+      };
+      localStorage.setItem('expose-profi-autosave', JSON.stringify(dataToSave));
+    }, 5000); // Alle 5 Sekunden
+
+    return () => clearInterval(saveInterval);
+  }, [propertyData, uploadedPhotos, aiGeneratedText, editableText]);
+
+  // NEU: Restore auf Mount
+  useEffect(() => {
+    const saved = localStorage.getItem('expose-profi-autosave');
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        const savedTime = new Date(data.timestamp);
+        const now = new Date();
+        const hoursSince = (now - savedTime) / (1000 * 60 * 60);
+        
+        if (hoursSince < 24) { // Nur wenn < 24h alt
+          setShowRestoreBanner(true);
+        }
+      } catch (e) {}
+    }
+  }, []);
+
+  const handleRestore = () => {
+    const saved = localStorage.getItem('expose-profi-autosave');
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        setPropertyData(data.propertyData || propertyData);
+        if (data.uploadedPhotos) {
+          const restoredPhotos = data.uploadedPhotos.map(p => ({
+            ...p,
+            preview: p.base64 // base64 as preview
+          }));
+          setUploadedPhotos(restoredPhotos);
+        }
+        setAiGeneratedText(data.aiGeneratedText || '');
+        setEditableText(data.editableText || '');
+        setShowRestoreBanner(false);
+        showToast('Daten wiederhergestellt!', 'success');
+      } catch (e) {
+        showToast('Fehler beim Wiederherstellen', 'error');
+      }
+    }
+  };
+
+  const handleClearSaved = () => {
+    localStorage.removeItem('expose-profi-autosave');
+    setShowRestoreBanner(false);
+    showToast('Gespeicherte Daten gelöscht', 'info');
+  };
+
+  // URL Parameter Check
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('success') === 'true') {
       setIsUnlocked(true);
       window.history.replaceState({}, '', window.location.pathname);
+      showToast('Zahlung erfolgreich! Exposé freigeschaltet.', 'success');
     }
   }, []);
 
@@ -113,8 +240,9 @@ export default function ExposeProfiMonument() {
         });
       }
       setUploadedPhotos(prev => [...prev, ...newPhotos]);
+      showToast(`${newPhotos.length} Foto(s) hochgeladen`, 'success');
     } catch (e) {
-      alert('Fehler beim Verarbeiten');
+      showToast('Fehler beim Verarbeiten der Fotos', 'error');
     }
   };
 
@@ -129,7 +257,10 @@ export default function ExposeProfiMonument() {
         preview: URL.createObjectURL(file),
         base64
       });
-    } catch (e) {}
+      showToast('Logo hochgeladen', 'success');
+    } catch (e) {
+      showToast('Fehler beim Logo-Upload', 'error');
+    }
   };
 
   const handleEnergyUpload = async (e) => {
@@ -167,9 +298,13 @@ export default function ExposeProfiMonument() {
           ausweistyp: data.data.ausweistyp || ''
         }));
         setEnergyUploadStatus('complete');
-      } else throw new Error();
+        showToast('Energieausweis erfolgreich erkannt', 'success');
+      } else {
+        throw new Error(data.message || 'OCR fehlgeschlagen');
+      }
     } catch (e) {
       setEnergyUploadStatus('error');
+      showToast(e.message || 'Fehler bei der Energieausweis-Erkennung', 'error');
       setTimeout(() => setEnergyUploadStatus('idle'), 3000);
     }
   };
@@ -181,9 +316,10 @@ export default function ExposeProfiMonument() {
   const removePhoto = (id) => {
     setUploadedPhotos(prev => {
       const p = prev.find(x => x.id === id);
-      if (p?.preview) URL.revokeObjectURL(p.preview);
+      if (p?.preview && !p.preview.startsWith('data:')) URL.revokeObjectURL(p.preview);
       return prev.filter(x => x.id !== id);
     });
+    showToast('Foto entfernt', 'info');
   };
 
   const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
@@ -193,12 +329,17 @@ export default function ExposeProfiMonument() {
     setIsDragging(false);
     handlePhotoUpload(e.dataTransfer.files);
   };
+  const handleGenerate = async (tonality = selectedTonality) => {
+    if (!isFormValid()) {
+      showToast('Bitte füllen Sie alle Pflichtfelder aus', 'warning');
+      return;
+    }
 
-  const handleGenerate = async () => {
-    if (!isFormValid()) return;
     setIsGenerating(true);
     setGenerationProgress(0);
     setAiGeneratedText('');
+    setEditableText('');
+    setIsTextEdited(false);
     setIsUnlocked(false);
 
     try {
@@ -214,6 +355,7 @@ export default function ExposeProfiMonument() {
         body: JSON.stringify({
           propertyData: { ...propertyData, uploadedPhotosCount: uploadedPhotos.length },
           photos,
+          tonality,
           mode: 'generate'
         })
       });
@@ -222,34 +364,67 @@ export default function ExposeProfiMonument() {
       setGenerationProgress(100);
 
       const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Generierung fehlgeschlagen');
+      }
+
       if (data.success && data.text) {
         setAiGeneratedText(data.text);
+        setEditableText(data.text); // Auch in editierbaren Text
+        setSelectedTonality(tonality);
+        showToast(`Exposé generiert (${tonality === 'professional' ? 'Professionell' : tonality === 'emotional' ? 'Emotional' : 'Luxuriös'})`, 'success');
+        
+        // Rate Limit Info
+        if (data.rateLimit && data.rateLimit.remaining <= 3) {
+          setTimeout(() => {
+            showToast(`Noch ${data.rateLimit.remaining} Generierungen in diesem Zeitfenster möglich`, 'warning');
+          }, 2000);
+        }
       } else {
-        setAiGeneratedText('❌ Fehler bei der Generierung');
+        throw new Error(data.message || 'Kein Text generiert');
       }
     } catch (e) {
+      console.error('Generate Error:', e);
       setAiGeneratedText(`❌ Fehler: ${e.message}`);
+      setEditableText('');
+      showToast(e.message || 'Fehler bei der Generierung', 'error');
     } finally {
       setIsGenerating(false);
       setGenerationProgress(0);
     }
   };
 
+  const handleTextEdit = (newText) => {
+    setEditableText(newText);
+    setIsTextEdited(true);
+  };
+
+  const handleResetText = () => {
+    setEditableText(aiGeneratedText);
+    setIsTextEdited(false);
+    showToast('Text zurückgesetzt', 'info');
+  };
+
   const openPayment = () => setShowPaymentModal(true);
   const closePayment = () => setShowPaymentModal(false);
+  
   const handlePaymentSuccess = () => {
     setIsUnlocked(true);
     setShowPaymentModal(false);
+    showToast('Zahlung erfolgreich! Exposé freigeschaltet.', 'success');
   };
 
   const getTeaserText = () => {
-    if (isUnlocked || aiGeneratedText.length <= 300) return aiGeneratedText;
-    return aiGeneratedText.substring(0, 300);
+    const text = isTextEdited ? editableText : aiGeneratedText;
+    if (isUnlocked || text.length <= 300) return text;
+    return text.substring(0, 300);
   };
 
   const getBlurredText = () => {
-    if (isUnlocked || aiGeneratedText.length <= 300) return '';
-    return aiGeneratedText.substring(300);
+    const text = isTextEdited ? editableText : aiGeneratedText;
+    if (isUnlocked || text.length <= 300) return '';
+    return text.substring(300);
   };
 
   const parseTextSections = (text) => {
@@ -282,10 +457,25 @@ export default function ExposeProfiMonument() {
     return sections;
   };
 
+  const capitalizeFirst = (str) => {
+    if (!str) return str;
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  };
+
+  const cleanLatex = (text) => {
+    if (!text) return text;
+    return text
+      .replace(/\$m\^2\$/g, 'm²')
+      .replace(/\$m²\$/g, 'm²')
+      .replace(/m\^2/g, 'm²')
+      .replace(/\bm2\b/g, 'm²')
+      .replace(/\bqm\b/gi, 'm²');
+  };
+
   const handleExportPDF = () => {
     const { jsPDF } = window.jspdf;
     if (!jsPDF) {
-      alert('PDF-Bibliothek nicht geladen. Bitte Seite neu laden.');
+      showToast('PDF-Bibliothek nicht geladen. Bitte Seite neu laden.', 'error');
       return;
     }
 
@@ -299,27 +489,12 @@ export default function ExposeProfiMonument() {
     const gray = { r: 100, g: 100, b: 100 };
     const lightGray = { r: 245, g: 245, b: 245 };
 
-    const sections = parseTextSections(aiGeneratedText);
+    // Text von LaTeX bereinigen - verwende editierten Text!
+    const textToUse = isTextEdited ? editableText : aiGeneratedText;
+    const cleanedText = cleanLatex(textToUse);
+    const sections = parseTextSections(cleanedText);
 
-    const keywords = ['Fußbodenheizung', 'Einbauküche', 'Balkon', 'Terrasse', 'Garten', 'Garage', 
-                     'Aufzug', 'Keller', 'Parkettboden', 'Smart Home', 'Wärmepumpe'];
-
-    const makeBoldKeywords = (text) => {
-      const parts = [];
-      let remainingText = text;
-      
-      keywords.forEach(keyword => {
-        const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
-        const matches = [];
-        let match;
-        
-        while ((match = regex.exec(text)) !== null) {
-          matches.push({ text: match[0], index: match.index });
-        }
-      });
-
-      return text;
-    };
+    const ortCapitalized = capitalizeFirst(propertyData.ort || 'Lage');
 
     // SEITE 1: COVER
     let yPos = margin;
@@ -350,7 +525,7 @@ export default function ExposeProfiMonument() {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(26);
     doc.setTextColor(navy.r, navy.g, navy.b);
-    const headline = sections.headline || `${propertyData.objekttyp || 'Immobilie'} in ${propertyData.ort || 'bester Lage'}`;
+    const headline = sections.headline || `${propertyData.objekttyp || 'Immobilie'} in ${ortCapitalized}`;
     const headlineLines = doc.splitTextToSize(headline, pageWidth - 2 * margin);
     headlineLines.forEach((line, i) => {
       doc.text(line, pageWidth / 2, yPos + (i * 10), { align: 'center' });
@@ -394,6 +569,11 @@ export default function ExposeProfiMonument() {
       }
     });
 
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(gold.r, gold.g, gold.b);
+    doc.text('1', pageWidth - margin, pageHeight - 10, { align: 'right' });
+
     // SEITE 2: DETAILS
     doc.addPage();
     yPos = margin;
@@ -420,11 +600,10 @@ export default function ExposeProfiMonument() {
     leftY += 10;
 
     const technicalData = [
-      ['Wohnfläche', `${propertyData.wohnflaeche} m²`],
-      ['Zimmer', propertyData.zimmer],
+      ['Objekttyp', propertyData.objekttyp || '—'],
       ['Schlafzimmer', propertyData.schlafzimmer || '—'],
       ['Bäder', propertyData.baeder || '—'],
-      ['Baujahr', propertyData.baujahr || '—'],
+      ['Balkone', propertyData.balkone || '—'],
       ['Sanierung', propertyData.sanierung || '—'],
       ['Zustand', propertyData.zustand || '—'],
       ['Heizung', propertyData.heizung || '—'],
@@ -432,21 +611,40 @@ export default function ExposeProfiMonument() {
       ['Stellplätze', propertyData.stellplaetze || '—']
     ];
 
+    if (propertyData.denkmalschutz === 'Ja') technicalData.push(['Denkmalschutz', 'Ja']);
+    if (propertyData.einliegerwohnung === 'Ja') technicalData.push(['Einliegerwohnung', 'Ja']);
+    if (propertyData.erbpacht === 'Ja') technicalData.push(['Erbpacht', 'Ja']);
+    if (propertyData.hausgeld) technicalData.push(['Hausgeld', `${propertyData.hausgeld} €/M`]);
+    if (propertyData.verfuegbarAb) technicalData.push(['Verfügbar ab', propertyData.verfuegbarAb]);
+
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(gray.r, gray.g, gray.b);
 
     technicalData.forEach(([key, val]) => {
       if (leftY > pageHeight - 30) return;
-      doc.setFont('helvetica', 'bold');
-      doc.text(`${key}:`, margin + 3, leftY);
-      doc.setFont('helvetica', 'normal');
-      doc.text(val, margin + 3, leftY + 4);
-      leftY += 12;
+      if (val && val !== '—') {
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${key}:`, margin + 3, leftY);
+        doc.setFont('helvetica', 'normal');
+        doc.text(val, margin + 3, leftY + 4);
+        leftY += 12;
+      }
     });
 
     let rightY = yPos;
-    
+
+    if (rightY > pageHeight - 25) {
+      doc.addPage();
+      rightY = margin;
+      if (uploadedLogo?.base64) {
+        try {
+          doc.addImage(uploadedLogo.base64, 'JPEG', margin, rightY, 30, 15);
+        } catch (e) {}
+      }
+      rightY += 25;
+    }
+
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
     doc.setTextColor(navy.r, navy.g, navy.b);
@@ -474,11 +672,21 @@ export default function ExposeProfiMonument() {
           } catch (e) {}
         }
         rightY += 25;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(gold.r, gold.g, gold.b);
+        doc.text(`${doc.internal.pages.length - 1}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
       }
-      
+
       doc.text(line, rightColStart, rightY);
       rightY += lineHeight;
     });
+
+    doc.setPage(2);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(gold.r, gold.g, gold.b);
+    doc.text('2', pageWidth - margin, pageHeight - 10, { align: 'right' });
 
     // SEITE 3: LAGE & FOTOS
     doc.addPage();
@@ -490,6 +698,11 @@ export default function ExposeProfiMonument() {
       } catch (e) {}
     }
     yPos += 25;
+
+    if (yPos > pageHeight - 25) {
+      doc.addPage();
+      yPos = margin;
+    }
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
@@ -504,6 +717,16 @@ export default function ExposeProfiMonument() {
     const lageText = sections.lage || '';
     const lageLines = doc.splitTextToSize(lageText, pageWidth - 2 * margin);
     lageLines.forEach(line => {
+      if (yPos > pageHeight - 30) {
+        doc.addPage();
+        yPos = margin;
+        if (uploadedLogo?.base64) {
+          try {
+            doc.addImage(uploadedLogo.base64, 'JPEG', margin, yPos, 30, 15);
+          } catch (e) {}
+        }
+        yPos += 25;
+      }
       doc.text(line, margin, yPos);
       yPos += 6.5;
     });
@@ -511,6 +734,11 @@ export default function ExposeProfiMonument() {
     yPos += 10;
 
     if (uploadedPhotos.length > 1) {
+      if (yPos > pageHeight - 25) {
+        doc.addPage();
+        yPos = margin;
+      }
+
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(12);
       doc.setTextColor(navy.r, navy.g, navy.b);
@@ -541,7 +769,7 @@ export default function ExposeProfiMonument() {
 
     if (yPos > pageHeight - 60) {
       doc.addPage();
-      yPos = margin;
+      yPos = margin + 30;
     }
 
     yPos = Math.max(yPos, pageHeight - 55);
@@ -560,67 +788,111 @@ export default function ExposeProfiMonument() {
     doc.setFontSize(9);
     const energieText = sections.energie || `Energieeffizienzklasse: ${propertyData.effizienzklasse || '—'}`;
     const kontaktText = sections.kontakt || 'Vereinbaren Sie einen Besichtigungstermin.';
-    
-    doc.text(energieText, margin + 5, yPos);
-    yPos += 6;
-    doc.text(kontaktText, margin + 5, yPos);
 
-    const totalPages = doc.internal.pages.length - 1;
-    for (let i = 1; i <= totalPages; i++) {
-      doc.setPage(i);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(gold.r, gold.g, gold.b);
-      doc.text(`${i}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
+    const energieLines = doc.splitTextToSize(cleanLatex(energieText), pageWidth - 2 * margin - 10);
+    energieLines.forEach(line => {
+      doc.text(line, margin + 5, yPos);
+      yPos += 5;
+    });
+
+    yPos += 3;
+    const kontaktLines = doc.splitTextToSize(kontaktText, pageWidth - 2 * margin - 10);
+    kontaktLines.forEach(line => {
+      doc.text(line, margin + 5, yPos);
+      yPos += 5;
+    });
+
+    if (propertyData.provision) {
+      yPos += 2;
+      doc.text(`Provision: ${propertyData.provision}`, margin + 5, yPos);
     }
 
-    const fileName = `Expose_${propertyData.ort || 'Objekt'}_${propertyData.objekttyp || 'Immobilie'}_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(255, 255, 255);
+    doc.text('3', pageWidth - margin, pageHeight - 10, { align: 'right' });
+
+    const fileName = `Expose_${ortCapitalized}_${propertyData.objekttyp || 'Immobilie'}_${new Date().toISOString().split('T')[0]}.pdf`;
     doc.save(fileName);
-    
-    console.log('✅ Monumental PDF erstellt:', fileName);
+
+    showToast('PDF erfolgreich erstellt!', 'success');
+    console.log('✅ PDF erstellt:', fileName);
   };
 
   const handleExportEmail = () => {
-    const subj = `Exposé: ${propertyData.objekttyp || 'Objekt'} in ${propertyData.ort || 'Lage'}`;
-    const body = `${aiGeneratedText}\n\n---\nErstellt mit Exposé-Profi`;
+    const textToUse = isTextEdited ? editableText : aiGeneratedText;
+    const subj = `Exposé: ${propertyData.objekttyp || 'Objekt'} in ${capitalizeFirst(propertyData.ort || 'Lage')}`;
+    const body = `${cleanLatex(textToUse)}\n\n---\nErstellt mit Exposé-Profi`;
     window.location.href = `mailto:?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
+    showToast('E-Mail-Client geöffnet', 'info');
   };
 
   const handleBetaSubmit = (e) => {
     e.preventDefault();
     if (betaEmail && betaEmail.includes('@')) {
       setBetaSubmitted(true);
+      showToast('Erfolgreich angemeldet!', 'success');
       setTimeout(() => {
         setBetaEmail('');
         setBetaSubmitted(false);
       }, 5000);
     }
   };
-
   return (
     <div className="min-h-screen bg-white">
+      {/* TOAST NOTIFICATIONS */}
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
+      )}
+
+      {/* RESTORE BANNER */}
+      {showRestoreBanner && (
+        <div className="fixed top-0 left-0 right-0 bg-gradient-to-r from-[#C5A059] to-[#B39050] text-white py-3 px-6 z-40 shadow-xl">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <AlertCircle className="w-5 h-5" />
+              <span className="font-medium">Möchten Sie Ihre zuletzt gespeicherten Daten wiederherstellen?</span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <button onClick={handleRestore}
+                className="px-4 py-2 bg-white text-[#0A192F] rounded-lg font-semibold hover:bg-gray-100 transition-all">
+                Wiederherstellen
+              </button>
+              <button onClick={handleClearSaved}
+                className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-semibold transition-all">
+                Verwerfen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* HERO */}
       <section className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0A192F] via-[#112240] to-[#0A192F] text-white overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-20 left-10 w-96 h-96 bg-[#C5A059] rounded-full blur-3xl"></div>
           <div className="absolute bottom-20 right-10 w-96 h-96 bg-[#C5A059] rounded-full blur-3xl"></div>
         </div>
-        
+
         <div className="relative z-10 max-w-6xl mx-auto px-6 text-center">
           <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-lg rounded-full px-6 py-3 mb-8 border border-white/20">
             <Sparkles className="w-5 h-5 text-[#C5A059]" />
             <span className="text-sm font-medium">Powered by Vision-KI</span>
           </div>
-          
+
           <h1 className="text-7xl md:text-8xl font-bold mb-6 leading-tight">
             Exposés in<br/>
             <span className="bg-gradient-to-r from-[#C5A059] via-[#D4AF6A] to-[#C5A059] bg-clip-text text-transparent">Perfektion</span>
           </h1>
-          
+
           <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-3xl mx-auto leading-relaxed">
             Immobilien-Exposés, die verkaufen. Erstellt von Vision-KI, die Architektur versteht.
           </p>
-          
+
           <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6">
             <button onClick={scrollToStudio}
               className="group px-10 py-5 bg-gradient-to-r from-[#C5A059] to-[#B39050] hover:from-[#D4AF6A] hover:to-[#C5A059] text-white rounded-2xl text-lg font-bold transition-all transform hover:scale-105 shadow-2xl">
@@ -630,7 +902,7 @@ export default function ExposeProfiMonument() {
               </span>
             </button>
           </div>
-          
+
           <div className="mt-16 grid grid-cols-3 gap-8 max-w-3xl mx-auto">
             {[
               { num: '<30s', text: 'Generierung' },
@@ -644,7 +916,7 @@ export default function ExposeProfiMonument() {
             ))}
           </div>
         </div>
-        
+
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce">
           <ChevronDown className="w-8 h-8 text-white/50" />
         </div>
@@ -719,18 +991,20 @@ export default function ExposeProfiMonument() {
               </div>
               <h3 className="text-2xl font-bold text-[#0A192F]">Basisdaten</h3>
             </div>
-            
+
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div>
+              <div className="lg:col-span-1">
                 <label className="block text-sm font-semibold text-[#0A192F] mb-2">Objekttyp *</label>
                 <select name="objekttyp" value={propertyData.objekttyp} onChange={handleInputChange}
                   className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-[#C5A059] focus:ring-4 focus:ring-[#C5A059]/20 outline-none transition-all">
                   <option value="">Wählen</option>
-                  <option value="Haus">Haus</option>
-                  <option value="Wohnung">Wohnung</option>
-                  <option value="Loft">Loft</option>
-                  <option value="Penthouse">Penthouse</option>
-                  <option value="Gewerbe">Gewerbe</option>
+                  {objekttypen.map((typ, i) => (
+                    typ.startsWith('---') ? (
+                      <option key={i} disabled className="font-bold bg-gray-100">{typ}</option>
+                    ) : (
+                      <option key={i} value={typ}>{typ}</option>
+                    )
+                  ))}
                 </select>
               </div>
 
@@ -793,7 +1067,7 @@ export default function ExposeProfiMonument() {
               </div>
               <h3 className="text-2xl font-bold text-[#0A192F]">Flächen & Räume</h3>
             </div>
-            
+
             <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
               {[
                 { label: 'Wohnfläche (m²) *', field: 'wohnflaeche', ph: '85' },
@@ -823,7 +1097,7 @@ export default function ExposeProfiMonument() {
               </div>
               <h3 className="text-2xl font-bold text-[#0A192F]">Zustand & Technik</h3>
             </div>
-            
+
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div>
                 <label className="block text-sm font-semibold text-[#0A192F] mb-2">Baujahr</label>
@@ -891,8 +1165,103 @@ export default function ExposeProfiMonument() {
               </div>
             </div>
           </div>
+          {/* RECHTLICHES & FINANZEN */}
+          <div className="bg-gradient-to-br from-gray-50 to-white rounded-3xl p-8 shadow-xl mb-8 border border-gray-100">
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center">
+                <Scale className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-[#0A192F]">Rechtliches & Finanzen</h3>
+            </div>
 
-          {/* AUSSTATTUNG KARTE */}
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-sm font-semibold text-[#0A192F] mb-2">Denkmalschutz</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {['Ja', 'Nein'].map(t => (
+                    <button key={t} type="button"
+                      onClick={() => setPropertyData(prev => ({ ...prev, denkmalschutz: t }))}
+                      className={`px-4 py-3 rounded-xl font-semibold transition-all ${
+                        propertyData.denkmalschutz === t
+                          ? 'bg-gradient-to-r from-[#C5A059] to-[#B39050] text-white shadow-lg'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}>
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-[#0A192F] mb-2">Erbpacht</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {['Ja', 'Nein'].map(t => (
+                    <button key={t} type="button"
+                      onClick={() => setPropertyData(prev => ({ ...prev, erbpacht: t }))}
+                      className={`px-4 py-3 rounded-xl font-semibold transition-all ${
+                        propertyData.erbpacht === t
+                          ? 'bg-gradient-to-r from-[#C5A059] to-[#B39050] text-white shadow-lg'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}>
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-[#0A192F] mb-2">Einliegerwohnung</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {['Ja', 'Nein'].map(t => (
+                    <button key={t} type="button"
+                      onClick={() => setPropertyData(prev => ({ ...prev, einliegerwohnung: t }))}
+                      className={`px-4 py-3 rounded-xl font-semibold transition-all ${
+                        propertyData.einliegerwohnung === t
+                          ? 'bg-gradient-to-r from-[#C5A059] to-[#B39050] text-white shadow-lg'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}>
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-[#0A192F] mb-2">Hausgeld (€/Monat)</label>
+                <input type="text" value={propertyData.hausgeld}
+                  onChange={(e) => handleNumericInput(e, 'hausgeld')}
+                  placeholder="350"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-[#C5A059] focus:ring-4 focus:ring-[#C5A059]/20 outline-none transition-all" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-[#0A192F] mb-2">Provision</label>
+                <input type="text" name="provision" value={propertyData.provision} onChange={handleInputChange}
+                  placeholder="3,57% inkl. MwSt."
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-[#C5A059] focus:ring-4 focus:ring-[#C5A059]/20 outline-none transition-all" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-[#0A192F] mb-2">Provisionspflichtig</label>
+                <select name="provisionspflichtig" value={propertyData.provisionspflichtig} onChange={handleInputChange}
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-[#C5A059] focus:ring-4 focus:ring-[#C5A059]/20 outline-none transition-all">
+                  <option value="Nein">Nein</option>
+                  <option value="Käufer">Käufer</option>
+                  <option value="Verkäufer">Verkäufer</option>
+                  <option value="Beide">Beide</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-[#0A192F] mb-2">Verfügbar ab</label>
+                <input type="text" name="verfuegbarAb" value={propertyData.verfuegbarAb} onChange={handleInputChange}
+                  placeholder="sofort / 01.06.2026"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-[#C5A059] focus:ring-4 focus:ring-[#C5A059]/20 outline-none transition-all" />
+              </div>
+            </div>
+          </div>
+
+          {/* AUSSTATTUNG */}
           <div className="bg-gradient-to-br from-gray-50 to-white rounded-3xl p-8 shadow-xl mb-8 border border-gray-100">
             <div className="flex items-center space-x-3 mb-6">
               <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
@@ -900,7 +1269,7 @@ export default function ExposeProfiMonument() {
               </div>
               <h3 className="text-2xl font-bold text-[#0A192F]">Ausstattung</h3>
             </div>
-            
+
             {Object.entries(features).map(([cat, feats]) => (
               <div key={cat} className="mb-6 last:mb-0">
                 <h4 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">
@@ -923,7 +1292,7 @@ export default function ExposeProfiMonument() {
             ))}
           </div>
 
-          {/* UPLOADS KARTE */}
+          {/* UPLOADS */}
           <div className="bg-gradient-to-br from-gray-50 to-white rounded-3xl p-8 shadow-xl mb-8 border border-gray-100">
             <div className="flex items-center space-x-3 mb-6">
               <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center">
@@ -1036,8 +1405,40 @@ export default function ExposeProfiMonument() {
             </div>
           </div>
 
+          {/* TONALITÄT AUSWAHL (NEU!) */}
+          <div className="bg-gradient-to-br from-[#C5A059]/5 to-[#D4AF6A]/5 rounded-3xl p-8 shadow-xl mb-8 border-2 border-[#C5A059]/20">
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="w-12 h-12 bg-gradient-to-br from-[#C5A059] to-[#B39050] rounded-xl flex items-center justify-center">
+                <Zap className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-[#0A192F]">Tonalität wählen</h3>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-4">
+              {[
+                { value: 'professional', label: 'Professionell', desc: 'Sachlich & vertrauenswürdig', icon: '💼' },
+                { value: 'emotional', label: 'Emotional', desc: 'Wärmend & einladend', icon: '🎭' },
+                { value: 'luxury', label: 'Luxuriös', desc: 'Exklusiv & prestigeträchtig', icon: '👑' }
+              ].map(tone => (
+                <button key={tone.value} type="button"
+                  onClick={() => setSelectedTonality(tone.value)}
+                  className={`p-6 rounded-2xl text-left transition-all ${
+                    selectedTonality === tone.value
+                      ? 'bg-gradient-to-br from-[#C5A059] to-[#B39050] text-white shadow-2xl scale-105'
+                      : 'bg-white text-gray-700 hover:bg-gray-50 shadow-lg'
+                  }`}>
+                  <div className="text-3xl mb-3">{tone.icon}</div>
+                  <h4 className="font-bold text-lg mb-2">{tone.label}</h4>
+                  <p className={`text-sm ${selectedTonality === tone.value ? 'text-white/80' : 'text-gray-600'}`}>
+                    {tone.desc}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* GENERATE BUTTON */}
-          <button onClick={handleGenerate}
+          <button onClick={() => handleGenerate(selectedTonality)}
             disabled={!isFormValid() || isGenerating}
             className={`w-full py-6 rounded-2xl text-xl font-bold transition-all shadow-2xl ${
               isFormValid() && !isGenerating
@@ -1052,7 +1453,7 @@ export default function ExposeProfiMonument() {
             ) : (
               <span className="flex items-center justify-center space-x-3">
                 <Sparkles className="w-6 h-6" />
-                <span>Premium-Exposé generieren</span>
+                <span>Premium-Exposé generieren ({selectedTonality === 'professional' ? 'Professionell' : selectedTonality === 'emotional' ? 'Emotional' : 'Luxuriös'})</span>
               </span>
             )}
           </button>
@@ -1068,17 +1469,28 @@ export default function ExposeProfiMonument() {
               </p>
             </div>
           )}
-
-          {/* RESULT */}
-          {aiGeneratedText && (
+          {/* RESULT MIT TEXT-EDITOR (NEU!) */}
+          {(aiGeneratedText || editableText) && (
             <div className="mt-12 bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden">
-              <div className="bg-gradient-to-r from-[#0A192F] to-[#112240] px-8 py-6 flex items-center justify-between">
+              <div className="bg-gradient-to-r from-[#0A192F] to-[#112240] px-8 py-6 flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center space-x-3">
                   <Eye className="w-6 h-6 text-[#C5A059]" />
                   <h3 className="text-2xl font-bold text-white">Ihr Exposé</h3>
+                  {isTextEdited && (
+                    <span className="px-3 py-1 bg-amber-500 text-white text-xs font-bold rounded-full">
+                      Bearbeitet
+                    </span>
+                  )}
                 </div>
                 {isUnlocked && (
                   <div className="flex space-x-3">
+                    {isTextEdited && (
+                      <button onClick={handleResetText}
+                        className="px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-lg border border-white/20 rounded-xl text-white font-semibold transition-all flex items-center space-x-2">
+                        <RotateCcw className="w-5 h-5" />
+                        <span>Zurücksetzen</span>
+                      </button>
+                    )}
                     <button onClick={handleExportPDF}
                       className="px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-lg border border-white/20 rounded-xl text-white font-semibold transition-all flex items-center space-x-2">
                       <Download className="w-5 h-5" />
@@ -1093,36 +1505,58 @@ export default function ExposeProfiMonument() {
                 )}
               </div>
 
-              <div className="p-8 relative">
-                <div className="prose prose-lg max-w-none">
-                  <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
-                    {getTeaserText()}
-                  </div>
-                  
-                  {!isUnlocked && getBlurredText() && (
-                    <div className="relative mt-4">
-                      <div className="whitespace-pre-wrap text-gray-800 leading-relaxed blur-md select-none">
-                        {getBlurredText()}
-                      </div>
-                      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/90 to-white flex items-center justify-center">
-                        <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-10 text-center max-w-md border-2 border-[#C5A059]/20">
-                          <div className="w-20 h-20 bg-gradient-to-br from-[#C5A059] to-[#B39050] rounded-full flex items-center justify-center mx-auto mb-6">
-                            <Lock className="w-10 h-10 text-white" />
-                          </div>
-                          <h4 className="text-3xl font-bold text-[#0A192F] mb-3">Premium-Exposé</h4>
-                          <p className="text-gray-600 mb-8 leading-relaxed">
-                            Schalten Sie das vollständige Exposé mit allen Funktionen frei.
-                          </p>
-                          <button onClick={openPayment}
-                            className="w-full bg-gradient-to-r from-[#C5A059] to-[#B39050] hover:from-[#D4AF6A] hover:to-[#C5A059] text-white px-8 py-4 rounded-2xl text-lg font-bold transition-all transform hover:scale-105 shadow-xl flex items-center justify-center space-x-2">
-                            <Unlock className="w-6 h-6" />
-                            <span>Jetzt für 29€ freischalten</span>
-                          </button>
-                        </div>
+              <div className="p-8">
+                {isUnlocked ? (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <p className="text-sm text-gray-600">
+                        Bearbeiten Sie den Text direkt. Änderungen werden automatisch im PDF übernommen.
+                      </p>
+                      <div className="text-xs text-gray-500">
+                        {editableText.length} Zeichen
                       </div>
                     </div>
-                  )}
-                </div>
+                    
+                    <textarea
+                      value={editableText}
+                      onChange={(e) => handleTextEdit(e.target.value)}
+                      className="w-full min-h-[600px] px-6 py-4 border-2 border-gray-200 rounded-2xl focus:border-[#C5A059] focus:ring-4 focus:ring-[#C5A059]/20 outline-none font-mono text-sm leading-relaxed resize-y"
+                      placeholder="Ihr generierter Text erscheint hier..."
+                    />
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <div className="prose prose-lg max-w-none mb-4">
+                      <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
+                        {getTeaserText()}
+                      </div>
+                    </div>
+
+                    {getBlurredText() && (
+                      <div className="relative mt-4">
+                        <div className="whitespace-pre-wrap text-gray-800 leading-relaxed blur-md select-none">
+                          {getBlurredText()}
+                        </div>
+                        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/90 to-white flex items-center justify-center">
+                          <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-10 text-center max-w-md border-2 border-[#C5A059]/20">
+                            <div className="w-20 h-20 bg-gradient-to-br from-[#C5A059] to-[#B39050] rounded-full flex items-center justify-center mx-auto mb-6">
+                              <Lock className="w-10 h-10 text-white" />
+                            </div>
+                            <h4 className="text-3xl font-bold text-[#0A192F] mb-3">Premium-Exposé</h4>
+                            <p className="text-gray-600 mb-8 leading-relaxed">
+                              Schalten Sie das vollständige Exposé mit Text-Editor und allen Funktionen frei.
+                            </p>
+                            <button onClick={openPayment}
+                              className="w-full bg-gradient-to-r from-[#C5A059] to-[#B39050] hover:from-[#D4AF6A] hover:to-[#C5A059] text-white px-8 py-4 rounded-2xl text-lg font-bold transition-all transform hover:scale-105 shadow-xl flex items-center justify-center space-x-2">
+                              <Unlock className="w-6 h-6" />
+                              <span>Jetzt für 29€ freischalten</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1148,7 +1582,15 @@ export default function ExposeProfiMonument() {
                 price: '29€',
                 per: 'pro Exposé',
                 desc: 'Perfekt für gelegentliche Nutzung',
-                features: ['Vision-KI Analyse', 'Foto-Beschriftungen', 'OCR Energieausweis', 'PDF-Export', 'E-Mail-Export'],
+                features: [
+                  'Vision-KI Analyse', 
+                  '3 Tonalitäten (Pro/Emotional/Luxus)',
+                  'Text-Editor mit Live-Bearbeitung',
+                  'Foto-Beschriftungen', 
+                  'OCR Energieausweis', 
+                  'PDF-Export', 
+                  'E-Mail-Export'
+                ],
                 cta: 'Jetzt starten',
                 highlight: false
               },
@@ -1157,7 +1599,15 @@ export default function ExposeProfiMonument() {
                 price: '79€',
                 per: 'pro Monat',
                 desc: 'Für professionelle Makler',
-                features: ['Alles aus Starter', '10 Exposés inkl.', 'Eigenes Branding', 'Prioritäts-Support', 'Beta-Features'],
+                features: [
+                  'Alles aus Starter', 
+                  '10 Exposés inkl.', 
+                  'Eigenes Branding', 
+                  'Prioritäts-Support', 
+                  'Beta-Features',
+                  'Exposé-Verlauf & Speicherung',
+                  'Bulk-Export (bald)'
+                ],
                 cta: 'Pro werden',
                 highlight: true
               }
@@ -1315,9 +1765,10 @@ export default function ExposeProfiMonument() {
             <div className="space-y-4 mb-8">
               {[
                 'Vollständiger Premium-Text',
+                'Text-Editor mit Live-Bearbeitung',
                 'PDF-Export mit Branding',
                 'E-Mail-Versand',
-                'Text-Bearbeitung'
+                '3 Tonalitäten wählbar'
               ].map((f, i) => (
                 <div key={i} className="flex items-center space-x-3">
                   <CheckCircle className="w-5 h-5 text-[#C5A059] flex-shrink-0" />
@@ -1331,13 +1782,30 @@ export default function ExposeProfiMonument() {
               <CreditCard className="w-6 h-6" />
               <span>Jetzt freischalten (Demo)</span>
             </button>
-            
+
             <p className="text-xs text-gray-500 text-center mt-4">
               Demo-Modus: Klick simuliert erfolgreiche Zahlung
             </p>
           </div>
         </div>
       )}
+
+      {/* CSS für Toast Animation */}
+      <style>{`
+        @keyframes slide-in {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        .animate-slide-in {
+          animation: slide-in 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 }
