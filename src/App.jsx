@@ -254,72 +254,331 @@ export default function ExposeProfiMonument() {
 
   const handleExportPDF = () => {
     const { jsPDF } = window.jspdf;
-    if (!jsPDF) { alert('PDF nicht geladen'); return; }
+    if (!jsPDF) { 
+      alert('PDF-Bibliothek nicht geladen. Bitte Seite neu laden.'); 
+      return; 
+    }
 
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const w = doc.internal.pageSize.getWidth();
-    const h = doc.internal.pageSize.getHeight();
-    const m = 20;
-    let y = m;
+    const doc = new jsPDF({ 
+      orientation: 'portrait', 
+      unit: 'mm', 
+      format: 'a4' 
+    });
 
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 20;
+
+    // FARBEN
     const gold = { r: 197, g: 160, b: 89 };
     const navy = { r: 10, g: 25, b: 47 };
+    const gray = { r: 100, g: 100, b: 100 };
 
+    // HILFSFUNKTION: Seitenzahl in Gold unten rechts
+    const addPageNumber = (pageNum) => {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(gold.r, gold.g, gold.b);
+      doc.text(`${pageNum}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
+    };
+
+    // ════════════════════════════════════════════════════════════
+    // SEITE 1: LOGO + HAUPTFOTO + ÜBERSCHRIFT + ECKDATEN
+    // ════════════════════════════════════════════════════════════
+    let yPos = margin;
+
+    // LOGO oben links
     if (uploadedLogo?.base64) {
-      try { doc.addImage(uploadedLogo.base64, 'JPEG', m, y, 40, 20); } catch (e) {}
+      try {
+        doc.addImage(uploadedLogo.base64, 'JPEG', margin, yPos, 40, 20);
+      } catch (e) {
+        console.error('Logo-Fehler:', e);
+      }
     }
-    y += 30;
+    yPos += 30;
 
+    // HAUPTFOTO (fast halbe Seite)
     if (uploadedPhotos[0]?.base64) {
-      try { doc.addImage(uploadedPhotos[0].base64, 'JPEG', m, y, w - 2 * m, 100); } catch (e) {}
-      y += 110;
+      const photoHeight = 110;
+      try {
+        doc.addImage(
+          uploadedPhotos[0].base64, 
+          'JPEG', 
+          margin, 
+          yPos, 
+          pageWidth - 2 * margin, 
+          photoHeight
+        );
+      } catch (e) {
+        console.error('Foto-Fehler:', e);
+      }
+      yPos += photoHeight + 15;
+    } else {
+      yPos += 15;
     }
 
+    // HAUPTÜBERSCHRIFT (Serif-Effekt durch Bold + Größe)
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(20);
+    doc.setFontSize(24);
     doc.setTextColor(navy.r, navy.g, navy.b);
-    doc.text(`${propertyData.objekttyp || 'Immobilie'} in ${propertyData.ort || 'Lage'}`, m, y);
-    y += 15;
+    
+    const headline = `${propertyData.objekttyp || 'Exklusive Immobilie'} in ${propertyData.ort || 'bester Lage'}`;
+    doc.text(headline, pageWidth / 2, yPos, { align: 'center' });
+    yPos += 8;
 
+    // GOLD-LINIE (1mm dick)
+    doc.setDrawColor(gold.r, gold.g, gold.b);
+    doc.setLineWidth(1);
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+    yPos += 15;
+
+    // ECKDATEN in 3-Spalten-Matrix
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(gray.r, gray.g, gray.b);
+
+    const eckdaten = [
+      { label: 'Wohnfläche', value: `${propertyData.wohnflaeche || '—'} m²` },
+      { label: 'Zimmer', value: propertyData.zimmer || '—' },
+      { label: 'Baujahr', value: propertyData.baujahr || '—' },
+      { label: 'Zustand', value: propertyData.zustand || '—' },
+      { label: 'Preis', value: propertyData.preis ? `${Number(propertyData.preis).toLocaleString('de-DE')} €` : '—' },
+      { label: 'Stellplätze', value: propertyData.stellplaetze || '—' }
+    ];
+
+    const colWidth = (pageWidth - 2 * margin) / 3;
+    let col = 0;
+    let row = 0;
+
+    eckdaten.forEach((item, i) => {
+      const xPos = margin + (col * colWidth);
+      const yBase = yPos + (row * 15);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(navy.r, navy.g, navy.b);
+      doc.text(item.label, xPos, yBase);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(11);
+      doc.setTextColor(gray.r, gray.g, gray.b);
+      doc.text(item.value, xPos, yBase + 6);
+      
+      col++;
+      if (col >= 3) {
+        col = 0;
+        row++;
+      }
+    });
+
+    // Seitenzahl
+    addPageNumber(1);
+
+    // ════════════════════════════════════════════════════════════
+    // SEITE 2: OBJEKTDATEN (links schmal) + BESCHREIBUNG (rechts)
+    // ════════════════════════════════════════════════════════════
+    doc.addPage();
+    yPos = margin;
+
+    // LOGO auch auf Seite 2
+    if (uploadedLogo?.base64) {
+      try {
+        doc.addImage(uploadedLogo.base64, 'JPEG', margin, yPos, 30, 15);
+      } catch (e) {}
+    }
+    yPos += 25;
+
+    // ÜBERSCHRIFT
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.setTextColor(navy.r, navy.g, navy.b);
+    doc.text('Objektbeschreibung', margin, yPos);
+    yPos += 3;
+
+    // Gold-Linie
     doc.setDrawColor(gold.r, gold.g, gold.b);
     doc.setLineWidth(0.5);
-    doc.line(m, y, w - m, y);
-    y += 10;
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+    yPos += 12;
 
-    const info = [
-      `${propertyData.wohnflaeche} m²`,
-      `${propertyData.zimmer} Zimmer`,
-      propertyData.baujahr ? `Bj ${propertyData.baujahr}` : null,
-      propertyData.preis ? `${Number(propertyData.preis).toLocaleString('de-DE')} €` : null
-    ].filter(Boolean).join('  •  ');
+    // LAYOUT: Links schmal (50mm), Rechts breit (Rest)
+    const leftColWidth = 50;
+    const rightColStart = margin + leftColWidth + 10;
+    const rightColWidth = pageWidth - rightColStart - margin;
+
+    // LINKE SPALTE: Objektdaten kompakt
+    let leftY = yPos;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(navy.r, navy.g, navy.b);
+    doc.text('Eckdaten', margin, leftY);
+    leftY += 8;
+
+    const dataLeft = [
+      ['Wohnfläche', `${propertyData.wohnflaeche || '—'} m²`],
+      ['Zimmer', propertyData.zimmer || '—'],
+      ['Schlafzimmer', propertyData.schlafzimmer || '—'],
+      ['Bäder', propertyData.baeder || '—'],
+      ['Baujahr', propertyData.baujahr || '—'],
+      ['Zustand', propertyData.zustand || '—']
+    ];
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(gray.r, gray.g, gray.b);
+
+    dataLeft.forEach(([key, val]) => {
+      if (val && val !== '—') {
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${key}:`, margin, leftY);
+        doc.setFont('helvetica', 'normal');
+        doc.text(val, margin, leftY + 4);
+        leftY += 10;
+      }
+    });
+
+    // Energie-Daten
+    if (propertyData.effizienzklasse) {
+      leftY += 5;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(navy.r, navy.g, navy.b);
+      doc.text('Energie', margin, leftY);
+      leftY += 8;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(gray.r, gray.g, gray.b);
+      doc.text(`Klasse: ${propertyData.effizienzklasse}`, margin, leftY);
+      leftY += 5;
+      if (propertyData.energiebedarf) {
+        doc.text(`${propertyData.energiebedarf} kWh/(m²·a)`, margin, leftY);
+        leftY += 5;
+      }
+      if (propertyData.energietraeger) {
+        doc.text(`Träger: ${propertyData.energietraeger}`, margin, leftY);
+      }
+    }
+
+    // RECHTE SPALTE: Beschreibungstext mit 1.5 Zeilenabstand
+    let rightY = yPos;
     
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
-    doc.text(info, m, y);
-    y += 15;
+    doc.setTextColor(gray.r, gray.g, gray.b);
 
-    doc.addPage();
-    y = m;
+    const lines = doc.splitTextToSize(aiGeneratedText, rightColWidth);
+    const lineHeight = 6;
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.text('Beschreibung', m, y);
-    y += 10;
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    const lines = doc.splitTextToSize(aiGeneratedText, w - 2 * m);
-    lines.forEach(line => {
-      if (y > h - 30) {
+    lines.forEach((line) => {
+      if (rightY > pageHeight - 30) {
         doc.addPage();
-        y = m;
+        addPageNumber(doc.internal.pages.length - 1);
+        rightY = margin;
+        
+        if (uploadedLogo?.base64) {
+          try {
+            doc.addImage(uploadedLogo.base64, 'JPEG', margin, rightY, 30, 15);
+          } catch (e) {}
+        }
+        rightY += 25;
       }
-      doc.text(line, m, y);
-      y += 5;
+      doc.text(line, rightColStart, rightY);
+      rightY += lineHeight;
     });
 
-    const file = `Expose_${propertyData.objekttyp || 'Immobilie'}_${propertyData.ort || 'Objekt'}_${new Date().toISOString().split('T')[0]}.pdf`;
-    doc.save(file);
+    // Seitenzahl
+    addPageNumber(2);
+
+    // ════════════════════════════════════════════════════════════
+    // SEITE 3: FOTO-GALERIE (2x2 Raster mit abgerundeten Ecken)
+    // ════════════════════════════════════════════════════════════
+    if (uploadedPhotos.length > 1) {
+      doc.addPage();
+      yPos = margin;
+
+      if (uploadedLogo?.base64) {
+        try {
+          doc.addImage(uploadedLogo.base64, 'JPEG', margin, yPos, 30, 15);
+        } catch (e) {}
+      }
+      yPos += 25;
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(18);
+      doc.setTextColor(navy.r, navy.g, navy.b);
+      doc.text('Weitere Impressionen', margin, yPos);
+      yPos += 3;
+
+      doc.setDrawColor(gold.r, gold.g, gold.b);
+      doc.setLineWidth(0.5);
+      doc.line(margin, yPos, pageWidth - margin, yPos);
+      yPos += 15;
+
+      const photos = uploadedPhotos.slice(1, 5);
+      const gap = 8;
+      const photoWidth = (pageWidth - 2 * margin - gap) / 2;
+      const photoHeight = 60;
+      const cornerRadius = 3;
+
+      photos.forEach((photo, i) => {
+        const col = i % 2;
+        const row = Math.floor(i / 2);
+        const xPos = margin + (col * (photoWidth + gap));
+        const yPhotoPos = yPos + (row * (photoHeight + gap));
+
+        try {
+          doc.setFillColor(255, 255, 255);
+          doc.roundedRect(xPos, yPhotoPos, photoWidth, photoHeight, cornerRadius, cornerRadius, 'F');
+          
+          doc.addImage(photo.base64, 'JPEG', xPos, yPhotoPos, photoWidth, photoHeight);
+          
+          doc.setDrawColor(gold.r, gold.g, gold.b);
+          doc.setLineWidth(0.3);
+          doc.roundedRect(xPos, yPhotoPos, photoWidth, photoHeight, cornerRadius, cornerRadius, 'S');
+          
+          if (photo.label) {
+            doc.setFont('helvetica', 'italic');
+            doc.setFontSize(8);
+            doc.setTextColor(gray.r, gray.g, gray.b);
+            doc.text(photo.label, xPos + photoWidth / 2, yPhotoPos + photoHeight + 5, { align: 'center' });
+          }
+        } catch (e) {
+          console.error('Foto-Fehler:', e);
+        }
+      });
+
+      addPageNumber(3);
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // FOOTER auf allen Seiten
+    // ════════════════════════════════════════════════════════════
+    const totalPages = doc.internal.pages.length - 1;
+    
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      
+      const footerY = pageHeight - 15;
+      
+      doc.setDrawColor(gold.r, gold.g, gold.b);
+      doc.setLineWidth(0.3);
+      doc.line(margin, footerY - 3, pageWidth - margin, footerY - 3);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(gray.r, gray.g, gray.b);
+      doc.text('Erstellt mit Exposé-Profi  •  www.expose-profi.de', pageWidth / 2, footerY, { align: 'center' });
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // SPEICHERN
+    // ════════════════════════════════════════════════════════════
+    const fileName = `Expose_${propertyData.objekttyp || 'Immobilie'}_${propertyData.ort || 'Objekt'}_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+    
+    console.log('✅ Edles PDF erstellt:', fileName);
   };
 
   const handleExportEmail = () => {
