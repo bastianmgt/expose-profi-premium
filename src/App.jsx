@@ -252,135 +252,152 @@ export default function ExposeProfiMonument() {
     return aiGeneratedText.substring(300);
   };
 
+  const parseTextSections = (text) => {
+    const sections = {
+      headline: '',
+      einleitung: '',
+      objekt: '',
+      lage: '',
+      ausstattung: '',
+      energie: '',
+      kontakt: ''
+    };
+
+    const headlineMatch = text.match(/\[HEADLINE\]([\s\S]*?)(?=\[|$)/i);
+    const einleitungMatch = text.match(/\[EINLEITUNG\]([\s\S]*?)(?=\[|$)/i);
+    const objektMatch = text.match(/\[OBJEKT\]([\s\S]*?)(?=\[|$)/i);
+    const lageMatch = text.match(/\[LAGE\]([\s\S]*?)(?=\[|$)/i);
+    const ausstattungMatch = text.match(/\[AUSSTATTUNG\]([\s\S]*?)(?=\[|$)/i);
+    const energieMatch = text.match(/\[ENERGIE\]([\s\S]*?)(?=\[|$)/i);
+    const kontaktMatch = text.match(/\[KONTAKT\]([\s\S]*?)(?=\[|$)/i);
+
+    if (headlineMatch) sections.headline = headlineMatch[1].trim();
+    if (einleitungMatch) sections.einleitung = einleitungMatch[1].trim();
+    if (objektMatch) sections.objekt = objektMatch[1].trim();
+    if (lageMatch) sections.lage = lageMatch[1].trim();
+    if (ausstattungMatch) sections.ausstattung = ausstattungMatch[1].trim();
+    if (energieMatch) sections.energie = energieMatch[1].trim();
+    if (kontaktMatch) sections.kontakt = kontaktMatch[1].trim();
+
+    return sections;
+  };
+
   const handleExportPDF = () => {
     const { jsPDF } = window.jspdf;
-    if (!jsPDF) { 
-      alert('PDF-Bibliothek nicht geladen. Bitte Seite neu laden.'); 
-      return; 
+    if (!jsPDF) {
+      alert('PDF-Bibliothek nicht geladen. Bitte Seite neu laden.');
+      return;
     }
 
-    const doc = new jsPDF({ 
-      orientation: 'portrait', 
-      unit: 'mm', 
-      format: 'a4' 
-    });
-
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 20;
 
-    // FARBEN
     const gold = { r: 197, g: 160, b: 89 };
     const navy = { r: 10, g: 25, b: 47 };
     const gray = { r: 100, g: 100, b: 100 };
+    const lightGray = { r: 245, g: 245, b: 245 };
 
-    // HILFSFUNKTION: Seitenzahl in Gold unten rechts
-    const addPageNumber = (pageNum) => {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.setTextColor(gold.r, gold.g, gold.b);
-      doc.text(`${pageNum}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
+    const sections = parseTextSections(aiGeneratedText);
+
+    const keywords = ['Fußbodenheizung', 'Einbauküche', 'Balkon', 'Terrasse', 'Garten', 'Garage', 
+                     'Aufzug', 'Keller', 'Parkettboden', 'Smart Home', 'Wärmepumpe'];
+
+    const makeBoldKeywords = (text) => {
+      const parts = [];
+      let remainingText = text;
+      
+      keywords.forEach(keyword => {
+        const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+        const matches = [];
+        let match;
+        
+        while ((match = regex.exec(text)) !== null) {
+          matches.push({ text: match[0], index: match.index });
+        }
+      });
+
+      return text;
     };
 
-    // ════════════════════════════════════════════════════════════
-    // SEITE 1: LOGO + HAUPTFOTO + ÜBERSCHRIFT + ECKDATEN
-    // ════════════════════════════════════════════════════════════
+    // SEITE 1: COVER
     let yPos = margin;
 
-    // LOGO oben links
     if (uploadedLogo?.base64) {
       try {
         doc.addImage(uploadedLogo.base64, 'JPEG', margin, yPos, 40, 20);
-      } catch (e) {
-        console.error('Logo-Fehler:', e);
-      }
+      } catch (e) {}
     }
-    yPos += 30;
+    yPos += 35;
 
-    // HAUPTFOTO (fast halbe Seite)
     if (uploadedPhotos[0]?.base64) {
-      const photoHeight = 110;
+      const photoHeight = 120;
+      const photoWidth = pageWidth - 2 * margin;
+      const cornerRadius = 3;
+      
       try {
-        doc.addImage(
-          uploadedPhotos[0].base64, 
-          'JPEG', 
-          margin, 
-          yPos, 
-          pageWidth - 2 * margin, 
-          photoHeight
-        );
-      } catch (e) {
-        console.error('Foto-Fehler:', e);
-      }
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(margin, yPos, photoWidth, photoHeight, cornerRadius, cornerRadius, 'F');
+        doc.addImage(uploadedPhotos[0].base64, 'JPEG', margin, yPos, photoWidth, photoHeight);
+        doc.setDrawColor(gold.r, gold.g, gold.b);
+        doc.setLineWidth(0.3);
+        doc.roundedRect(margin, yPos, photoWidth, photoHeight, cornerRadius, cornerRadius, 'S');
+      } catch (e) {}
       yPos += photoHeight + 15;
-    } else {
-      yPos += 15;
     }
 
-    // HAUPTÜBERSCHRIFT (Serif-Effekt durch Bold + Größe)
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(24);
+    doc.setFontSize(26);
     doc.setTextColor(navy.r, navy.g, navy.b);
-    
-    const headline = `${propertyData.objekttyp || 'Exklusive Immobilie'} in ${propertyData.ort || 'bester Lage'}`;
-    doc.text(headline, pageWidth / 2, yPos, { align: 'center' });
-    yPos += 8;
+    const headline = sections.headline || `${propertyData.objekttyp || 'Immobilie'} in ${propertyData.ort || 'bester Lage'}`;
+    const headlineLines = doc.splitTextToSize(headline, pageWidth - 2 * margin);
+    headlineLines.forEach((line, i) => {
+      doc.text(line, pageWidth / 2, yPos + (i * 10), { align: 'center' });
+    });
+    yPos += (headlineLines.length * 10) + 8;
 
-    // GOLD-LINIE (1mm dick)
     doc.setDrawColor(gold.r, gold.g, gold.b);
-    doc.setLineWidth(1);
+    doc.setLineWidth(1.5);
     doc.line(margin, yPos, pageWidth - margin, yPos);
     yPos += 15;
 
-    // ECKDATEN in 3-Spalten-Matrix
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(11);
-    doc.setTextColor(gray.r, gray.g, gray.b);
-
-    const eckdaten = [
-      { label: 'Wohnfläche', value: `${propertyData.wohnflaeche || '—'} m²` },
-      { label: 'Zimmer', value: propertyData.zimmer || '—' },
+    const topFacts = [
+      { label: 'Wohnfläche', value: `${propertyData.wohnflaeche} m²` },
+      { label: 'Zimmer', value: propertyData.zimmer },
       { label: 'Baujahr', value: propertyData.baujahr || '—' },
-      { label: 'Zustand', value: propertyData.zustand || '—' },
-      { label: 'Preis', value: propertyData.preis ? `${Number(propertyData.preis).toLocaleString('de-DE')} €` : '—' },
-      { label: 'Stellplätze', value: propertyData.stellplaetze || '—' }
+      { label: 'Preis', value: propertyData.preis ? `${Number(propertyData.preis).toLocaleString('de-DE')} €` : '—' }
     ];
 
-    const colWidth = (pageWidth - 2 * margin) / 3;
-    let col = 0;
-    let row = 0;
+    const factWidth = (pageWidth - 2 * margin) / 2;
+    let factCol = 0;
+    let factRow = 0;
 
-    eckdaten.forEach((item, i) => {
-      const xPos = margin + (col * colWidth);
-      const yBase = yPos + (row * 15);
-      
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9);
-      doc.setTextColor(navy.r, navy.g, navy.b);
-      doc.text(item.label, xPos, yBase);
-      
+    topFacts.forEach(fact => {
+      const xPos = margin + (factCol * factWidth);
+      const yBase = yPos + (factRow * 18);
+
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(11);
+      doc.setFontSize(9);
       doc.setTextColor(gray.r, gray.g, gray.b);
-      doc.text(item.value, xPos, yBase + 6);
-      
-      col++;
-      if (col >= 3) {
-        col = 0;
-        row++;
+      doc.text(fact.label, xPos, yBase);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(navy.r, navy.g, navy.b);
+      doc.text(fact.value, xPos, yBase + 6);
+
+      factCol++;
+      if (factCol >= 2) {
+        factCol = 0;
+        factRow++;
       }
     });
 
-    // Seitenzahl
-    addPageNumber(1);
-
-    // ════════════════════════════════════════════════════════════
-    // SEITE 2: OBJEKTDATEN (links schmal) + BESCHREIBUNG (rechts)
-    // ════════════════════════════════════════════════════════════
+    // SEITE 2: DETAILS
     doc.addPage();
     yPos = margin;
 
-    // LOGO auch auf Seite 2
     if (uploadedLogo?.base64) {
       try {
         doc.addImage(uploadedLogo.base64, 'JPEG', margin, yPos, 30, 15);
@@ -388,95 +405,69 @@ export default function ExposeProfiMonument() {
     }
     yPos += 25;
 
-    // ÜBERSCHRIFT
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(18);
-    doc.setTextColor(navy.r, navy.g, navy.b);
-    doc.text('Objektbeschreibung', margin, yPos);
-    yPos += 3;
-
-    // Gold-Linie
-    doc.setDrawColor(gold.r, gold.g, gold.b);
-    doc.setLineWidth(0.5);
-    doc.line(margin, yPos, pageWidth - margin, yPos);
-    yPos += 12;
-
-    // LAYOUT: Links schmal (50mm), Rechts breit (Rest)
-    const leftColWidth = 50;
+    const leftColWidth = 45;
     const rightColStart = margin + leftColWidth + 10;
     const rightColWidth = pageWidth - rightColStart - margin;
 
-    // LINKE SPALTE: Objektdaten kompakt
-    let leftY = yPos;
-    
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.setTextColor(navy.r, navy.g, navy.b);
-    doc.text('Eckdaten', margin, leftY);
-    leftY += 8;
+    doc.setFillColor(lightGray.r, lightGray.g, lightGray.b);
+    doc.rect(margin, yPos, leftColWidth, pageHeight - yPos - margin - 15, 'F');
 
-    const dataLeft = [
-      ['Wohnfläche', `${propertyData.wohnflaeche || '—'} m²`],
-      ['Zimmer', propertyData.zimmer || '—'],
+    let leftY = yPos + 5;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(navy.r, navy.g, navy.b);
+    doc.text('Technische Daten', margin + 3, leftY);
+    leftY += 10;
+
+    const technicalData = [
+      ['Wohnfläche', `${propertyData.wohnflaeche} m²`],
+      ['Zimmer', propertyData.zimmer],
       ['Schlafzimmer', propertyData.schlafzimmer || '—'],
       ['Bäder', propertyData.baeder || '—'],
       ['Baujahr', propertyData.baujahr || '—'],
-      ['Zustand', propertyData.zustand || '—']
+      ['Sanierung', propertyData.sanierung || '—'],
+      ['Zustand', propertyData.zustand || '—'],
+      ['Heizung', propertyData.heizung || '—'],
+      ['Keller', propertyData.keller || '—'],
+      ['Stellplätze', propertyData.stellplaetze || '—']
     ];
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(gray.r, gray.g, gray.b);
 
-    dataLeft.forEach(([key, val]) => {
-      if (val && val !== '—') {
-        doc.setFont('helvetica', 'bold');
-        doc.text(`${key}:`, margin, leftY);
-        doc.setFont('helvetica', 'normal');
-        doc.text(val, margin, leftY + 4);
-        leftY += 10;
-      }
+    technicalData.forEach(([key, val]) => {
+      if (leftY > pageHeight - 30) return;
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${key}:`, margin + 3, leftY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(val, margin + 3, leftY + 4);
+      leftY += 12;
     });
 
-    // Energie-Daten
-    if (propertyData.effizienzklasse) {
-      leftY += 5;
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.setTextColor(navy.r, navy.g, navy.b);
-      doc.text('Energie', margin, leftY);
-      leftY += 8;
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.setTextColor(gray.r, gray.g, gray.b);
-      doc.text(`Klasse: ${propertyData.effizienzklasse}`, margin, leftY);
-      leftY += 5;
-      if (propertyData.energiebedarf) {
-        doc.text(`${propertyData.energiebedarf} kWh/(m²·a)`, margin, leftY);
-        leftY += 5;
-      }
-      if (propertyData.energietraeger) {
-        doc.text(`Träger: ${propertyData.energietraeger}`, margin, leftY);
-      }
-    }
-
-    // RECHTE SPALTE: Beschreibungstext mit 1.5 Zeilenabstand
     let rightY = yPos;
     
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(navy.r, navy.g, navy.b);
+    doc.text('Beschreibung', rightColStart, rightY);
+    rightY += 10;
+
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
+    doc.setFontSize(11);
     doc.setTextColor(gray.r, gray.g, gray.b);
 
-    const lines = doc.splitTextToSize(aiGeneratedText, rightColWidth);
-    const lineHeight = 6;
+    const einleitungText = sections.einleitung || '';
+    const objektText = sections.objekt || '';
+    const combinedText = `${einleitungText}\n\n${objektText}`;
 
-    lines.forEach((line) => {
+    const textLines = doc.splitTextToSize(combinedText, rightColWidth);
+    const lineHeight = 6.5;
+
+    textLines.forEach((line) => {
       if (rightY > pageHeight - 30) {
         doc.addPage();
-        addPageNumber(doc.internal.pages.length - 1);
         rightY = margin;
-        
         if (uploadedLogo?.base64) {
           try {
             doc.addImage(uploadedLogo.base64, 'JPEG', margin, rightY, 30, 15);
@@ -484,43 +475,52 @@ export default function ExposeProfiMonument() {
         }
         rightY += 25;
       }
+      
       doc.text(line, rightColStart, rightY);
       rightY += lineHeight;
     });
 
-    // Seitenzahl
-    addPageNumber(2);
+    // SEITE 3: LAGE & FOTOS
+    doc.addPage();
+    yPos = margin;
 
-    // ════════════════════════════════════════════════════════════
-    // SEITE 3: FOTO-GALERIE (2x2 Raster mit abgerundeten Ecken)
-    // ════════════════════════════════════════════════════════════
+    if (uploadedLogo?.base64) {
+      try {
+        doc.addImage(uploadedLogo.base64, 'JPEG', margin, yPos, 30, 15);
+      } catch (e) {}
+    }
+    yPos += 25;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(navy.r, navy.g, navy.b);
+    doc.text('Lage & Umgebung', margin, yPos);
+    yPos += 10;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(gray.r, gray.g, gray.b);
+
+    const lageText = sections.lage || '';
+    const lageLines = doc.splitTextToSize(lageText, pageWidth - 2 * margin);
+    lageLines.forEach(line => {
+      doc.text(line, margin, yPos);
+      yPos += 6.5;
+    });
+
+    yPos += 10;
+
     if (uploadedPhotos.length > 1) {
-      doc.addPage();
-      yPos = margin;
-
-      if (uploadedLogo?.base64) {
-        try {
-          doc.addImage(uploadedLogo.base64, 'JPEG', margin, yPos, 30, 15);
-        } catch (e) {}
-      }
-      yPos += 25;
-
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(18);
+      doc.setFontSize(12);
       doc.setTextColor(navy.r, navy.g, navy.b);
-      doc.text('Weitere Impressionen', margin, yPos);
-      yPos += 3;
-
-      doc.setDrawColor(gold.r, gold.g, gold.b);
-      doc.setLineWidth(0.5);
-      doc.line(margin, yPos, pageWidth - margin, yPos);
-      yPos += 15;
+      doc.text('Weitere Ansichten', margin, yPos);
+      yPos += 10;
 
       const photos = uploadedPhotos.slice(1, 5);
       const gap = 8;
       const photoWidth = (pageWidth - 2 * margin - gap) / 2;
-      const photoHeight = 60;
-      const cornerRadius = 3;
+      const photoHeight = 55;
 
       photos.forEach((photo, i) => {
         const col = i % 2;
@@ -529,56 +529,55 @@ export default function ExposeProfiMonument() {
         const yPhotoPos = yPos + (row * (photoHeight + gap));
 
         try {
-          doc.setFillColor(255, 255, 255);
-          doc.roundedRect(xPos, yPhotoPos, photoWidth, photoHeight, cornerRadius, cornerRadius, 'F');
-          
           doc.addImage(photo.base64, 'JPEG', xPos, yPhotoPos, photoWidth, photoHeight);
-          
           doc.setDrawColor(gold.r, gold.g, gold.b);
-          doc.setLineWidth(0.3);
-          doc.roundedRect(xPos, yPhotoPos, photoWidth, photoHeight, cornerRadius, cornerRadius, 'S');
-          
-          if (photo.label) {
-            doc.setFont('helvetica', 'italic');
-            doc.setFontSize(8);
-            doc.setTextColor(gray.r, gray.g, gray.b);
-            doc.text(photo.label, xPos + photoWidth / 2, yPhotoPos + photoHeight + 5, { align: 'center' });
-          }
-        } catch (e) {
-          console.error('Foto-Fehler:', e);
-        }
+          doc.setLineWidth(0.2);
+          doc.rect(xPos, yPhotoPos, photoWidth, photoHeight);
+        } catch (e) {}
       });
 
-      addPageNumber(3);
+      yPos += Math.ceil(photos.length / 2) * (photoHeight + gap) + 10;
     }
 
-    // ════════════════════════════════════════════════════════════
-    // FOOTER auf allen Seiten
-    // ════════════════════════════════════════════════════════════
-    const totalPages = doc.internal.pages.length - 1;
+    if (yPos > pageHeight - 60) {
+      doc.addPage();
+      yPos = margin;
+    }
+
+    yPos = Math.max(yPos, pageHeight - 55);
+
+    doc.setFillColor(gold.r, gold.g, gold.b);
+    doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 45, 2, 2, 'F');
+
+    yPos += 8;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(255, 255, 255);
+    doc.text('Energie & Kontakt', margin + 5, yPos);
+    yPos += 10;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    const energieText = sections.energie || `Energieeffizienzklasse: ${propertyData.effizienzklasse || '—'}`;
+    const kontaktText = sections.kontakt || 'Vereinbaren Sie einen Besichtigungstermin.';
     
+    doc.text(energieText, margin + 5, yPos);
+    yPos += 6;
+    doc.text(kontaktText, margin + 5, yPos);
+
+    const totalPages = doc.internal.pages.length - 1;
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i);
-      
-      const footerY = pageHeight - 15;
-      
-      doc.setDrawColor(gold.r, gold.g, gold.b);
-      doc.setLineWidth(0.3);
-      doc.line(margin, footerY - 3, pageWidth - margin, footerY - 3);
-      
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.setTextColor(gray.r, gray.g, gray.b);
-      doc.text('Erstellt mit Exposé-Profi  •  www.expose-profi.de', pageWidth / 2, footerY, { align: 'center' });
+      doc.setFontSize(9);
+      doc.setTextColor(gold.r, gold.g, gold.b);
+      doc.text(`${i}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
     }
 
-    // ════════════════════════════════════════════════════════════
-    // SPEICHERN
-    // ════════════════════════════════════════════════════════════
-    const fileName = `Expose_${propertyData.objekttyp || 'Immobilie'}_${propertyData.ort || 'Objekt'}_${new Date().toISOString().split('T')[0]}.pdf`;
+    const fileName = `Expose_${propertyData.ort || 'Objekt'}_${propertyData.objekttyp || 'Immobilie'}_${new Date().toISOString().split('T')[0]}.pdf`;
     doc.save(fileName);
     
-    console.log('✅ Edles PDF erstellt:', fileName);
+    console.log('✅ Monumental PDF erstellt:', fileName);
   };
 
   const handleExportEmail = () => {
@@ -629,10 +628,6 @@ export default function ExposeProfiMonument() {
                 <Sparkles className="w-6 h-6" />
                 <span>Jetzt erstellen</span>
               </span>
-            </button>
-            <button
-              className="px-10 py-5 bg-white/10 hover:bg-white/20 backdrop-blur-lg border border-white/20 rounded-2xl text-lg font-bold transition-all">
-              Demo ansehen
             </button>
           </div>
           
@@ -1269,7 +1264,6 @@ export default function ExposeProfiMonument() {
               <ul className="space-y-2 text-sm text-gray-400">
                 <li><a href="#" className="hover:text-[#C5A059] transition-colors">Features</a></li>
                 <li><a href="#" className="hover:text-[#C5A059] transition-colors">Preise</a></li>
-                <li><a href="#" className="hover:text-[#C5A059] transition-colors">Demo</a></li>
               </ul>
             </div>
 
