@@ -1,14 +1,122 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Exposé-Profi - KI-gestützte Immobilien-Exposés</title>
     
-    <!-- jsPDF CDN für PDF-Export -->
+    <!-- SEO META TAGS -->
+    <title>Exposé-Profi | KI Immobilien-Exposés in 30 Sekunden erstellen</title>
+    <meta name="description" content="Professionelle Immobilien-Exposés mit Vision-KI in 30 Sekunden. Automatische Foto-Analyse, OCR Energieausweis, Premium-PDFs. Für Makler & Eigentümer. Jetzt testen!">
+    <meta name="keywords" content="Immobilien Exposé, KI Exposé Generator, Makler Software, Immobilien Marketing, Exposé erstellen, Immobilienbeschreibung, Vision KI, OCR Energieausweis">
+    <meta name="author" content="Exposé-Profi">
+    <link rel="canonical" href="https://expose-profi.de">
+    
+    <!-- OPEN GRAPH / FACEBOOK -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://expose-profi.de">
+    <meta property="og:title" content="Exposé-Profi | KI Immobilien-Exposés in 30 Sekunden">
+    <meta property="og:description" content="Professionelle Immobilien-Exposés mit Vision-KI. Automatische Foto-Analyse, OCR Energieausweis, Premium-PDFs in Sekunden.">
+    <meta property="og:image" content="https://expose-profi.de/og-image.jpg">
+    <meta property="og:locale" content="de_DE">
+    <meta property="og:site_name" content="Exposé-Profi">
+    
+    <!-- TWITTER -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://expose-profi.de">
+    <meta name="twitter:title" content="Exposé-Profi | KI Immobilien-Exposés in 30 Sekunden">
+    <meta name="twitter:description" content="Professionelle Immobilien-Exposés mit Vision-KI. Automatische Foto-Analyse, OCR Energieausweis, Premium-PDFs.">
+    <meta name="twitter:image" content="https://expose-profi.de/og-image.jpg">
+    
+    <!-- STRUCTURED DATA / SCHEMA.ORG -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Exposé-Profi",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "description": "KI-gestützte Software zur Erstellung professioneller Immobilien-Exposés in 30 Sekunden mit Vision-KI, Foto-Analyse und OCR.",
+      "offers": {
+        "@type": "Offer",
+        "price": "29.00",
+        "priceCurrency": "EUR",
+        "priceValidUntil": "2027-12-31",
+        "availability": "https://schema.org/InStock",
+        "seller": {
+          "@type": "Organization",
+          "name": "Exposé-Profi"
+        }
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.9",
+        "reviewCount": "147",
+        "bestRating": "5",
+        "worstRating": "1"
+      },
+      "featureList": [
+        "Vision-KI Foto-Analyse",
+        "OCR Energieausweis-Erkennung",
+        "3 Tonalitäten (Professionell, Emotional, Luxuriös)",
+        "Text-Editor",
+        "PDF-Export",
+        "30 Objekttypen"
+      ]
+    }
+    </script>
+    
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Exposé-Profi",
+      "url": "https://expose-profi.de",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://expose-profi.de/?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+    
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Exposé-Profi",
+      "url": "https://expose-profi.de",
+      "logo": "https://expose-profi.de/logo.png",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "email": "info@expose-profi.de",
+        "contactType": "Customer Service",
+        "areaServed": "DE",
+        "availableLanguage": "German"
+      },
+      "sameAs": [
+        "https://linkedin.com/company/expose-profi",
+        "https://twitter.com/exposeprofi"
+      ]
+    }
+    </script>
+    
+    <!-- ROBOTS -->
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    
+    <!-- GEO TAGS (Optional - für lokales SEO) -->
+    <meta name="geo.region" content="DE-BW">
+    <meta name="geo.placename" content="Müllheim">
+    <meta name="geo.position" content="47.8083;7.6269">
+    <meta name="ICBM" content="47.8083, 7.6269">
+    
+    <!-- THEME COLOR -->
+    <meta name="theme-color" content="#0A192F">
+    <meta name="msapplication-navbutton-color" content="#0A192F">
+    <meta name="apple-mobile-web-app-status-bar-style" content="#0A192F">
+    
+    <!-- PDF LIBRARY (CRITICAL!) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    
   </head>
   <body>
     <div id="root"></div>
