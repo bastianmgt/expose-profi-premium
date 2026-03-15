@@ -1,5 +1,6 @@
-// api/create-checkout.js
-export default async function handler(req, res) {
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -13,29 +14,26 @@ export default async function handler(req, res) {
   }
 
   try {
-    const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
     const DOMAIN = process.env.DOMAIN || 'https://expose-profi.de';
 
-    if (!STRIPE_SECRET_KEY) {
+    if (!process.env.STRIPE_SECRET_KEY) {
       console.error('[ERROR] STRIPE_SECRET_KEY fehlt');
       return res.status(500).json({
         success: false,
         error: 'Server-Konfigurationsfehler',
-        message: 'Stripe ist nicht konfiguriert. Bitte kontaktieren Sie den Support.'
+        message: 'Stripe ist nicht konfiguriert.'
       });
     }
 
-    const stripe = require('stripe')(STRIPE_SECRET_KEY);
-
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card', 'sepa_debit', 'giropay'],
+      payment_method_types: ['card', 'sepa_debit'],
       line_items: [
         {
           price_data: {
             currency: 'eur',
             product_data: {
               name: 'Premium Exposé',
-              description: 'Vollständiges KI-generiertes Immobilien-Exposé mit PDF-Export',
+              description: 'Vollständiges KI-generiertes Immobilien-Exposé',
             },
             unit_amount: 2900,
           },
@@ -66,4 +64,4 @@ export default async function handler(req, res) {
       details: error.message
     });
   }
-}
+};
