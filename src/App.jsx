@@ -45,6 +45,9 @@ function Toast({ message, type = 'info', onClose }) {
 }
 
 // Lightbox Component (NEU!)
+// STRIPE INTEGRATION - Toggle für Demo/Live Modus
+const STRIPE_ENABLED = true;
+
 function Lightbox({ photo, onClose }) {
   if (!photo) return null;
 
@@ -114,6 +117,9 @@ export default function ExposeProfiUltimateFinal() {
   
   // NEU: Lightbox
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
+
+  // STRIPE: Processing State
+const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   
   const photoInputRef = useRef(null);
   const logoInputRef = useRef(null);
@@ -782,6 +788,44 @@ export default function ExposeProfiUltimateFinal() {
       }, 5000);
     }
   };
+
+ // STRIPE: Checkout Handler
+const handleStripeCheckout = async () => {
+  if (!STRIPE_ENABLED) {
+    handlePaymentSuccess();
+    return;
+  }
+
+  setIsProcessingPayment(true);
+
+  try {
+    const response = await fetch('/api/create-checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: propertyData.maklerEmail || undefined
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || 'Checkout konnte nicht erstellt werden');
+    }
+
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      throw new Error('Keine Checkout-URL erhalten');
+    }
+
+  } catch (error) {
+    console.error('Stripe Checkout Error:', error);
+    showToast(error.message || 'Fehler beim Öffnen der Zahlungsseite', 'error');
+    setIsProcessingPayment(false);
+  }
+};
+
   return (
     <div className="min-h-screen bg-white">
       {/* TOAST */}
@@ -1837,52 +1881,88 @@ export default function ExposeProfiUltimateFinal() {
         </div>
       </footer>
 
-      {/* PAYMENT MODAL */}
-      {showPaymentModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={closePayment}>
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 relative" onClick={(e) => e.stopPropagation()}>
-            <button onClick={closePayment} className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
-              <X className="w-5 h-5 text-gray-600" />
-            </button>
+     {/* PAYMENT MODAL */}
+{showPaymentModal && (
+  <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={closePayment}>
+    <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 relative" onClick={(e) => e.stopPropagation()}>
+      <button onClick={closePayment} className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
+        <X className="w-5 h-5 text-gray-600" />
+      </button>
 
-            <div className="text-center mb-8">
-              <div className="w-20 h-20 bg-gradient-to-br from-[#C5A059] to-[#B39050] rounded-full flex items-center justify-center mx-auto mb-6">
-                <CreditCard className="w-10 h-10 text-white" />
-              </div>
-              <h3 className="text-3xl font-bold text-[#0A192F] mb-3">Premium freischalten</h3>
-              <div className="bg-[#C5A059]/10 border border-[#C5A059]/30 rounded-2xl p-6 mb-6">
-                <div className="text-5xl font-bold text-[#0A192F] mb-2">29€</div>
-                <div className="text-sm text-gray-600">einmalig pro Exposé</div>
-              </div>
-            </div>
-
-            <div className="space-y-4 mb-8">
-              {[
-                'Vollständiger Premium-Text',
-                'Text-Editor mit Live-Bearbeitung',
-                'PDF-Export mit Branding',
-                'E-Mail-Versand',
-                '3 Tonalitäten wählbar'
-              ].map((f, i) => (
-                <div key={i} className="flex items-center space-x-3">
-                  <CheckCircle className="w-5 h-5 text-[#C5A059] flex-shrink-0" />
-                  <span className="text-gray-700">{f}</span>
-                </div>
-              ))}
-            </div>
-
-            <button onClick={handlePaymentSuccess}
-              className="w-full bg-gradient-to-r from-[#C5A059] to-[#B39050] hover:from-[#D4AF6A] hover:to-[#C5A059] text-white py-5 rounded-2xl text-lg font-bold transition-all transform hover:scale-105 shadow-xl flex items-center justify-center space-x-2">
-              <CreditCard className="w-6 h-6" />
-              <span>Jetzt freischalten (Demo)</span>
-            </button>
-
-            <p className="text-xs text-gray-500 text-center mt-4">
-              Demo-Modus: Klick simuliert erfolgreiche Zahlung
-            </p>
-          </div>
+      <div className="text-center mb-8">
+        <div className="w-20 h-20 bg-gradient-to-br from-[#C5A059] to-[#B39050] rounded-full flex items-center justify-center mx-auto mb-6">
+          <CreditCard className="w-10 h-10 text-white" />
         </div>
+        <h3 className="text-3xl font-bold text-[#0A192F] mb-3">Premium freischalten</h3>
+        <div className="bg-[#C5A059]/10 border border-[#C5A059]/30 rounded-2xl p-6 mb-6">
+          <div className="text-5xl font-bold text-[#0A192F] mb-2">29€</div>
+          <div className="text-sm text-gray-600">einmalig pro Exposé</div>
+        </div>
+      </div>
+
+      <div className="space-y-4 mb-8">
+        {[
+          'Vollständiger Premium-Text',
+          'Text-Editor mit Live-Bearbeitung',
+          'PDF-Export mit Branding',
+          'E-Mail-Versand',
+          '3 Tonalitäten wählbar'
+        ].map((f, i) => (
+          <div key={i} className="flex items-center space-x-3">
+            <CheckCircle className="w-5 h-5 text-[#C5A059] flex-shrink-0" />
+            <span className="text-gray-700">{f}</span>
+          </div>
+        ))}
+      </div>
+
+      {STRIPE_ENABLED ? (
+        <button 
+          onClick={handleStripeCheckout}
+          disabled={isProcessingPayment}
+          className={`w-full py-5 rounded-2xl text-lg font-bold transition-all shadow-xl flex items-center justify-center space-x-2 ${
+            isProcessingPayment 
+              ? 'bg-gray-300 cursor-not-allowed' 
+              : 'bg-gradient-to-r from-[#C5A059] to-[#B39050] hover:from-[#D4AF6A] hover:to-[#C5A059] text-white transform hover:scale-105'
+          }`}>
+          {isProcessingPayment ? (
+            <>
+              <Loader2 className="w-6 h-6 animate-spin" />
+              <span>Öffne Zahlungsseite...</span>
+            </>
+          ) : (
+            <>
+              <CreditCard className="w-6 h-6" />
+              <span>Jetzt sicher bezahlen</span>
+            </>
+          )}
+        </button>
+      ) : (
+        <button onClick={handlePaymentSuccess}
+          className="w-full bg-gradient-to-r from-[#C5A059] to-[#B39050] hover:from-[#D4AF6A] hover:to-[#C5A059] text-white py-5 rounded-2xl text-lg font-bold transition-all transform hover:scale-105 shadow-xl flex items-center justify-center space-x-2">
+          <CreditCard className="w-6 h-6" />
+          <span>Jetzt freischalten (Demo)</span>
+        </button>
       )}
+
+      <div className="mt-6 flex items-center justify-center space-x-4 text-xs text-gray-500">
+        <div className="flex items-center space-x-1">
+          <Shield className="w-4 h-4" />
+          <span>SSL verschlüsselt</span>
+        </div>
+        <div className="flex items-center space-x-1">
+          <CreditCard className="w-4 h-4" />
+          <span>Powered by Stripe</span>
+        </div>
+      </div>
+
+      {!STRIPE_ENABLED && (
+        <p className="text-xs text-gray-500 text-center mt-4">
+          Demo-Modus: Klick simuliert erfolgreiche Zahlung
+        </p>
+      )}
+    </div>
+  </div>
+)}
 
       {/* CSS */}
       <style>{`
