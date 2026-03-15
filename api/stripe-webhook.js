@@ -1,20 +1,18 @@
-// api/stripe-webhook.js
-export default async function handler(req, res) {
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
   const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
 
-  if (!STRIPE_SECRET_KEY || !STRIPE_WEBHOOK_SECRET) {
-    console.error('[ERROR] Stripe Keys fehlen');
+  if (!STRIPE_WEBHOOK_SECRET) {
+    console.error('[ERROR] STRIPE_WEBHOOK_SECRET fehlt');
     return res.status(500).json({ error: 'Server not configured' });
   }
 
-  const stripe = require('stripe')(STRIPE_SECRET_KEY);
   const sig = req.headers['stripe-signature'];
-
   let event;
 
   try {
@@ -50,9 +48,9 @@ export default async function handler(req, res) {
   }
 
   return res.status(200).json({ received: true });
-}
+};
 
-export const config = {
+module.exports.config = {
   api: {
     bodyParser: false,
   },
