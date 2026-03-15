@@ -1,8 +1,5 @@
 // api/create-checkout.js
-// Stripe Checkout Session erstellen
-
 export default async function handler(req, res) {
-  // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -17,23 +14,19 @@ export default async function handler(req, res) {
 
   try {
     const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
-    
+    const DOMAIN = process.env.DOMAIN || 'https://expose-profi.de';
+
     if (!STRIPE_SECRET_KEY) {
-      console.error('[ERROR] STRIPE_SECRET_KEY fehlt in Environment Variables');
-      return res.status(500).json({ 
+      console.error('[ERROR] STRIPE_SECRET_KEY fehlt');
+      return res.status(500).json({
         success: false,
         error: 'Server-Konfigurationsfehler',
         message: 'Stripe ist nicht konfiguriert. Bitte kontaktieren Sie den Support.'
       });
     }
 
-    // Stripe initialisieren
     const stripe = require('stripe')(STRIPE_SECRET_KEY);
 
-    // Success & Cancel URLs
-    const YOUR_DOMAIN = process.env.DOMAIN || 'https://expose-profi.de';
-    
-    // Checkout Session erstellen
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card', 'sepa_debit', 'giropay'],
       line_items: [
@@ -43,27 +36,16 @@ export default async function handler(req, res) {
             product_data: {
               name: 'Premium Exposé',
               description: 'Vollständiges KI-generiertes Immobilien-Exposé mit PDF-Export',
-              images: [`${YOUR_DOMAIN}/og-image.jpg`],
             },
-            unit_amount: 2900, // 29.00 EUR (in Cents!)
+            unit_amount: 2900,
           },
           quantity: 1,
         },
       ],
       mode: 'payment',
-      success_url: `${YOUR_DOMAIN}?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${YOUR_DOMAIN}?canceled=true`,
-      metadata: {
-        product: 'premium_expose',
-        version: '1.0'
-      },
-      // Automatische Steuer-Berechnung (optional)
-      automatic_tax: {
-        enabled: false, // Kann später aktiviert werden
-      },
-      // Customer Email sammeln
+      success_url: `${DOMAIN}?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${DOMAIN}?canceled=true`,
       customer_email: req.body.email || undefined,
-      // Billing Details
       billing_address_collection: 'auto',
     });
 
@@ -77,11 +59,10 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('[ERROR] Stripe Checkout:', error);
-    
     return res.status(500).json({
       success: false,
       error: 'Checkout-Fehler',
-      message: 'Die Zahlungsseite konnte nicht erstellt werden. Bitte versuchen Sie es erneut.',
+      message: 'Die Zahlungsseite konnte nicht erstellt werden.',
       details: error.message
     });
   }
