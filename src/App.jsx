@@ -267,17 +267,15 @@ useEffect(() => {
   const params = new URLSearchParams(window.location.search);
   
   if (params.get('success') === 'true') {
-    console.log('[PAYMENT] Erfolgreicher Rücksprung von Stripe!');
+    console.log('[PAYMENT] ✅ Erfolgreicher Rücksprung von Stripe!');
     
-    // DATEN WIEDERHERSTELLEN!
     const savedPaymentData = localStorage.getItem('expose-profi-payment-pending');
     
     if (savedPaymentData) {
       try {
         const data = JSON.parse(savedPaymentData);
-        console.log('[PAYMENT] Stelle Daten wieder her...');
+        console.log('[PAYMENT] 📦 Stelle Daten wieder her...');
         
-        // Restore alle Daten
         setPropertyData(data.propertyData || {});
         
         if (data.uploadedPhotos && data.uploadedPhotos.length > 0) {
@@ -304,30 +302,26 @@ useEffect(() => {
         setIsTextEdited(data.isTextEdited || false);
         setSelectedTonality(data.selectedTonality || 'professional');
         
-        // Freischalten!
         setIsUnlocked(true);
         
-        // Cleanup
         localStorage.removeItem('expose-profi-payment-pending');
         
-        console.log('[PAYMENT] Wiederherstellung erfolgreich!');
+        console.log('[PAYMENT] 🎉 Wiederherstellung erfolgreich!');
         showToast('🎉 Zahlung erfolgreich! Exposé freigeschaltet.', 'success');
         
       } catch (e) {
-        console.error('[PAYMENT] Fehler beim Wiederherstellen:', e);
+        console.error('[PAYMENT] ❌ Fehler beim Wiederherstellen:', e);
         showToast('Daten konnten nicht wiederhergestellt werden. Bitte erstellen Sie das Exposé erneut.', 'error');
       }
     } else {
-      console.warn('[PAYMENT] Keine Payment-Daten gefunden!');
+      console.warn('[PAYMENT] ⚠️ Keine Payment-Daten gefunden!');
       setIsUnlocked(true);
       showToast('Zahlung erfolgreich!', 'success');
     }
     
-    // URL bereinigen
     window.history.replaceState({}, '', window.location.pathname);
   }
   
-  // CLEANUP: Alte Payment-Daten nach 1 Stunde löschen
   const checkOldPaymentData = () => {
     const savedData = localStorage.getItem('expose-profi-payment-pending');
     if (savedData) {
@@ -338,7 +332,7 @@ useEffect(() => {
         const hoursSince = (now - savedTime) / (1000 * 60 * 60);
         
         if (hoursSince > 1) {
-          console.log('[PAYMENT] Alte Payment-Daten gelöscht (>1h)');
+          console.log('[PAYMENT] 🧹 Alte Payment-Daten gelöscht (>1h)');
           localStorage.removeItem('expose-profi-payment-pending');
         }
       } catch (e) {}
@@ -347,6 +341,51 @@ useEffect(() => {
   
   checkOldPaymentData();
 }, []);
+```
+
+---
+
+## ✅ **SO VERWENDEN SIE DEN CODE:**
+
+### **SCHRITT 1: GitHub öffnen**
+```
+https://github.com/bastianmarget/expose-profi-premium
+→ src → App.jsx → ✏️ Edit
+```
+
+### **SCHRITT 2: Änderung 1**
+```
+1. STRG + F
+2. Suchen: const handleStripeCheckout
+3. KOMPLETTE Funktion markieren & löschen
+4. Code von oben (Änderung 1) kopieren
+5. STRG + V einfügen
+```
+
+### **SCHRITT 3: Änderung 2**
+```
+1. STRG + F
+2. Suchen: params.get('success')
+3. KOMPLETTEN useEffect markieren & löschen
+4. Code von oben (Änderung 2) kopieren
+5. STRG + V einfügen
+```
+
+### **SCHRITT 4: Speichern**
+```
+1. Runterscrollen
+2. Commit message: fix: payment flow localStorage restore
+3. Commit changes klicken
+```
+
+### **SCHRITT 5: Warten**
+```
+90 Sekunden warten!
+```
+
+### **SCHRITT 6: Testen**
+```
+Incognito + F12 Console → expose-profi.de
 
   const scrollToStudio = () => studioRef.current?.scrollIntoView({ behavior: 'smooth' });
 
@@ -872,10 +911,49 @@ const handleStripeCheckout = async () => {
     return;
   }
 
+
+    localStorage.setItem('expose-profi-payment-pending', JSON.stringify(paymentData));
+    console.log('[PAYMENT] ✅ Daten gespeichert vor Stripe-Redirect');
+
+    const response = await fetch('/api/create-checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: propertyData.maklerEmail || undefined
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || 'Checkout konnte nicht erstellt werden');
+    }
+
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      throw new Error('Keine Checkout-URL erhalten');
+    }
+
+  } catch (error) {
+    console.error('Stripe Checkout Error:', error);
+    showToast(error.message || 'Fehler beim Öffnen der Zahlungsseite', 'error');
+    setIsProcessingPayment(false);
+    localStorage.removeItem('expose-profi-payment-pending');
+  }
+};
+
+  // STRIPE: Checkout Handler
+const handleStripeCheckout = async () => {
+  if (!STRIPE_ENABLED) {
+    handlePaymentSuccess();
+    return;
+  }
+
   setIsProcessingPayment(true);
 
   try {
-    // 🔥 NEU: DATEN VOR REDIRECT SPEICHERN!
+    // 🔥 NEU: DATEN VOR STRIPE-REDIRECT SPEICHERN!
     const paymentData = {
       propertyData,
       uploadedPhotos: uploadedPhotos.map(p => ({
@@ -902,7 +980,7 @@ const handleStripeCheckout = async () => {
     };
 
     localStorage.setItem('expose-profi-payment-pending', JSON.stringify(paymentData));
-    console.log('[PAYMENT] Daten gespeichert vor Stripe-Redirect');
+    console.log('[PAYMENT] ✅ Daten gespeichert vor Stripe-Redirect');
 
     const response = await fetch('/api/create-checkout', {
       method: 'POST',
@@ -928,7 +1006,7 @@ const handleStripeCheckout = async () => {
     console.error('Stripe Checkout Error:', error);
     showToast(error.message || 'Fehler beim Öffnen der Zahlungsseite', 'error');
     setIsProcessingPayment(false);
-    localStorage.removeItem('expose-profi-payment-pending');  // 🔥 NEU!
+    localStorage.removeItem('expose-profi-payment-pending');
   }
 };
 
