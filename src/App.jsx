@@ -262,15 +262,91 @@ const [isProcessingPayment, setIsProcessingPayment] = useState(false);
     showToast('Gespeicherte Daten gelöscht', 'info');
   };
 
-  // URL Parameter Check
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('success') === 'true') {
+// URL Parameter Check & Payment Success Handler
+useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+  
+  if (params.get('success') === 'true') {
+    console.log('[PAYMENT] Erfolgreicher Rücksprung von Stripe!');
+    
+    // DATEN WIEDERHERSTELLEN!
+    const savedPaymentData = localStorage.getItem('expose-profi-payment-pending');
+    
+    if (savedPaymentData) {
+      try {
+        const data = JSON.parse(savedPaymentData);
+        console.log('[PAYMENT] Stelle Daten wieder her...');
+        
+        // Restore alle Daten
+        setPropertyData(data.propertyData || {});
+        
+        if (data.uploadedPhotos && data.uploadedPhotos.length > 0) {
+          const restoredPhotos = data.uploadedPhotos.map(p => ({
+            ...p,
+            preview: p.base64
+          }));
+          setUploadedPhotos(restoredPhotos);
+        }
+        
+        if (data.uploadedLogo) {
+          setUploadedLogo({
+            ...data.uploadedLogo,
+            preview: data.uploadedLogo.base64
+          });
+        }
+        
+        if (data.uploadedEnergyCert) {
+          setUploadedEnergyCert(data.uploadedEnergyCert);
+        }
+        
+        setAiGeneratedText(data.aiGeneratedText || '');
+        setEditableText(data.editableText || '');
+        setIsTextEdited(data.isTextEdited || false);
+        setSelectedTonality(data.selectedTonality || 'professional');
+        
+        // Freischalten!
+        setIsUnlocked(true);
+        
+        // Cleanup
+        localStorage.removeItem('expose-profi-payment-pending');
+        
+        console.log('[PAYMENT] Wiederherstellung erfolgreich!');
+        showToast('🎉 Zahlung erfolgreich! Exposé freigeschaltet.', 'success');
+        
+      } catch (e) {
+        console.error('[PAYMENT] Fehler beim Wiederherstellen:', e);
+        showToast('Daten konnten nicht wiederhergestellt werden. Bitte erstellen Sie das Exposé erneut.', 'error');
+      }
+    } else {
+      console.warn('[PAYMENT] Keine Payment-Daten gefunden!');
       setIsUnlocked(true);
-      window.history.replaceState({}, '', window.location.pathname);
-      showToast('Zahlung erfolgreich! Exposé freigeschaltet.', 'success');
+      showToast('Zahlung erfolgreich!', 'success');
     }
-  }, []);
+    
+    // URL bereinigen
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+  
+  // CLEANUP: Alte Payment-Daten nach 1 Stunde löschen
+  const checkOldPaymentData = () => {
+    const savedData = localStorage.getItem('expose-profi-payment-pending');
+    if (savedData) {
+      try {
+        const data = JSON.parse(savedData);
+        const savedTime = new Date(data.timestamp);
+        const now = new Date();
+        const hoursSince = (now - savedTime) / (1000 * 60 * 60);
+        
+        if (hoursSince > 1) {
+          console.log('[PAYMENT] Alte Payment-Daten gelöscht (>1h)');
+          localStorage.removeItem('expose-profi-payment-pending');
+        }
+      } catch (e) {}
+    }
+  };
+  
+  checkOldPaymentData();
+}, []);
 
   const scrollToStudio = () => studioRef.current?.scrollIntoView({ behavior: 'smooth' });
 
@@ -799,6 +875,35 @@ const handleStripeCheckout = async () => {
   setIsProcessingPayment(true);
 
   try {
+    // 🔥 NEU: DATEN VOR REDIRECT SPEICHERN!
+    const paymentData = {
+      propertyData,
+      uploadedPhotos: uploadedPhotos.map(p => ({
+        id: p.id,
+        name: p.name,
+        base64: p.base64,
+        label: p.label
+      })),
+      uploadedLogo: uploadedLogo ? {
+        id: uploadedLogo.id,
+        name: uploadedLogo.name,
+        base64: uploadedLogo.base64
+      } : null,
+      uploadedEnergyCert: uploadedEnergyCert ? {
+        id: uploadedEnergyCert.id,
+        name: uploadedEnergyCert.name,
+        base64: uploadedEnergyCert.base64
+      } : null,
+      aiGeneratedText,
+      editableText,
+      isTextEdited,
+      selectedTonality,
+      timestamp: new Date().toISOString()
+    };
+
+    localStorage.setItem('expose-profi-payment-pending', JSON.stringify(paymentData));
+    console.log('[PAYMENT] Daten gespeichert vor Stripe-Redirect');
+
     const response = await fetch('/api/create-checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -823,6 +928,7 @@ const handleStripeCheckout = async () => {
     console.error('Stripe Checkout Error:', error);
     showToast(error.message || 'Fehler beim Öffnen der Zahlungsseite', 'error');
     setIsProcessingPayment(false);
+    localStorage.removeItem('expose-profi-payment-pending');  // 🔥 NEU!
   }
 };
 
