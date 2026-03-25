@@ -686,203 +686,418 @@ Incognito + F12 Console → expose-profi.de
       .replace(/\bqm\b/gi, 'm²');
   };
 
-  const handleExportPDF = () => {
-    const { jsPDF } = window.jspdf;
-    if (!jsPDF) {
-      showToast('PDF-Bibliothek nicht geladen. Bitte Seite neu laden.', 'error');
-      return;
+const handleExportPDF = () => {
+  const { jsPDF } = window.jspdf;
+  if (!jsPDF) {
+    showToast('PDF-Bibliothek nicht geladen. Bitte Seite neu laden.', 'error');
+    return;
+  }
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 20;
+
+  const gold = { r: 197, g: 160, b: 89 };
+  const navy = { r: 10, g: 25, b: 47 };
+  const gray = { r: 100, g: 100, b: 100 };
+  const lightGray = { r: 245, g: 245, b: 245 };
+
+  const textToUse = isTextEdited ? editableText : aiGeneratedText;
+  const cleanedText = cleanLatex(textToUse);
+  const sections = parseTextSections(cleanedText);
+  const ortCapitalized = capitalizeFirst(propertyData.ort || 'Lage');
+
+  // ==================== SEITE 1: COVER ====================
+  
+  // Hintergrund
+  doc.setFillColor(navy.r, navy.g, navy.b);
+  doc.rect(0, 0, pageWidth, pageHeight, 'F');
+
+  // Logo oben links
+  if (uploadedLogo?.base64) {
+    try {
+      doc.addImage(uploadedLogo.base64, 'JPEG', margin, margin, 40, 20);
+    } catch (e) {
+      console.error('Logo Error:', e);
     }
+  }
 
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 20;
-
-    const gold = { r: 197, g: 160, b: 89 };
-    const navy = { r: 10, g: 25, b: 47 };
-    const gray = { r: 100, g: 100, b: 100 };
-    const lightGray = { r: 245, g: 245, b: 245 };
-
-    const textToUse = isTextEdited ? editableText : aiGeneratedText;
-    const cleanedText = cleanLatex(textToUse);
-    const sections = parseTextSections(cleanedText);
-    const ortCapitalized = capitalizeFirst(propertyData.ort || 'Lage');
-
-    // SEITE 1-2: Wie vorher (Cover + Details)
-    // [... bestehender PDF Code für Seite 1-2 bleibt identisch ...]
-
-    // Ich überspringe hier die Wiederholung und gehe direkt zu SEITE 3 mit MAKLER-KONTAKT:
-
-    // SEITE 3: LAGE & FOTOS & MAKLER-KONTAKT
-    doc.addPage();
-    let yPos = margin;
-
-    if (uploadedLogo?.base64) {
-      try {
-        doc.addImage(uploadedLogo.base64, 'JPEG', margin, yPos, 30, 15);
-      } catch (e) {}
+  // Hauptfoto (großes Hero-Bild)
+  if (uploadedPhotos.length > 0) {
+    try {
+      const heroPhoto = uploadedPhotos[0];
+      const photoHeight = 120;
+      const photoY = 60;
+      doc.addImage(heroPhoto.base64, 'JPEG', margin, photoY, pageWidth - 2 * margin, photoHeight);
+      
+      // Goldener Rahmen um Foto
+      doc.setDrawColor(gold.r, gold.g, gold.b);
+      doc.setLineWidth(1);
+      doc.rect(margin, photoY, pageWidth - 2 * margin, photoHeight);
+    } catch (e) {
+      console.error('Hero Photo Error:', e);
     }
-    yPos += 25;
+  }
 
-    if (yPos > pageHeight - 25) {
+  // Headline
+  let yPos = uploadedPhotos.length > 0 ? 195 : 100;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(24);
+  doc.setTextColor(255, 255, 255);
+  
+  const headlineText = sections.headline || `${propertyData.objekttyp || 'Immobilie'} in ${ortCapitalized}`;
+  const headlineLines = doc.splitTextToSize(headlineText, pageWidth - 2 * margin);
+  headlineLines.forEach(line => {
+    doc.text(line, pageWidth / 2, yPos, { align: 'center' });
+    yPos += 10;
+  });
+
+  // Goldene Trennlinie
+  yPos += 5;
+  doc.setDrawColor(gold.r, gold.g, gold.b);
+  doc.setLineWidth(0.5);
+  doc.line(margin + 20, yPos, pageWidth - margin - 20, yPos);
+  yPos += 10;
+
+  // Einleitung
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(12);
+  doc.setTextColor(255, 255, 255);
+  
+  const einleitungText = sections.einleitung || '';
+  const einleitungLines = doc.splitTextToSize(einleitungText, pageWidth - 2 * margin - 20);
+  einleitungLines.forEach(line => {
+    if (yPos > pageHeight - 30) {
       doc.addPage();
       yPos = margin;
     }
+    doc.text(line, pageWidth / 2, yPos, { align: 'center' });
+    yPos += 7;
+  });
 
+  // Key Facts Boxen (am unteren Rand)
+  const keyFactsY = pageHeight - 50;
+  const boxWidth = (pageWidth - 2 * margin - 16) / 3;
+  const facts = [
+    { label: 'Wohnfläche', value: propertyData.wohnflaeche ? `${propertyData.wohnflaeche} m²` : '—' },
+    { label: 'Zimmer', value: propertyData.zimmer || '—' },
+    { label: 'Preis', value: propertyData.preis ? `${parseInt(propertyData.preis).toLocaleString('de-DE')} €` : 'auf Anfrage' }
+  ];
+
+  facts.forEach((fact, i) => {
+    const xPos = margin + (i * (boxWidth + 8));
+    
+    doc.setFillColor(gold.r, gold.g, gold.b);
+    doc.roundedRect(xPos, keyFactsY, boxWidth, 25, 2, 2, 'F');
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.setTextColor(navy.r, navy.g, navy.b);
+    doc.text(fact.value, xPos + boxWidth / 2, keyFactsY + 10, { align: 'center' });
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.text(fact.label, xPos + boxWidth / 2, keyFactsY + 18, { align: 'center' });
+  });
+
+  // Seitenzahl
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(255, 255, 255);
+  doc.text('1', pageWidth - margin, pageHeight - 10, { align: 'right' });
+
+  // ==================== SEITE 2: DETAILS ====================
+  
+  doc.addPage();
+  yPos = margin;
+
+  // Logo
+  if (uploadedLogo?.base64) {
+    try {
+      doc.addImage(uploadedLogo.base64, 'JPEG', margin, yPos, 30, 15);
+    } catch (e) {}
+  }
+  yPos += 25;
+
+  // Objektbeschreibung
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(navy.r, navy.g, navy.b);
+  doc.text('Das Objekt', margin, yPos);
+  yPos += 10;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(gray.r, gray.g, gray.b);
+
+  const objektText = sections.objekt || '';
+  const objektLines = doc.splitTextToSize(objektText, pageWidth - 2 * margin);
+  objektLines.forEach(line => {
+    if (yPos > pageHeight - 25) {
+      doc.addPage();
+      yPos = margin;
+      if (uploadedLogo?.base64) {
+        try {
+          doc.addImage(uploadedLogo.base64, 'JPEG', margin, yPos, 30, 15);
+        } catch (e) {}
+      }
+      yPos += 25;
+    }
+    doc.text(line, margin, yPos);
+    yPos += 6.5;
+  });
+
+  yPos += 10;
+
+  // Objektdaten Tabelle
+  if (yPos > pageHeight - 80) {
+    doc.addPage();
+    yPos = margin + 30;
+  }
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(navy.r, navy.g, navy.b);
+  doc.text('Objektdaten', margin, yPos);
+  yPos += 8;
+
+  const tableData = [
+    ['Objekttyp', propertyData.objekttyp || '—'],
+    ['Wohnfläche', propertyData.wohnflaeche ? `${propertyData.wohnflaeche} m²` : '—'],
+    ['Zimmer', propertyData.zimmer || '—'],
+    ['Baujahr', propertyData.baujahr || '—'],
+    ['Zustand', propertyData.zustand || '—'],
+    ['Heizung', propertyData.heizung || '—']
+  ];
+
+  if (propertyData.grundstueck) {
+    tableData.push(['Grundstück', `${propertyData.grundstueck} m²`]);
+  }
+
+  doc.setFillColor(lightGray.r, lightGray.g, lightGray.b);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+
+  tableData.forEach((row, i) => {
+    const rowY = yPos + (i * 8);
+    
+    if (i % 2 === 0) {
+      doc.rect(margin, rowY - 5, pageWidth - 2 * margin, 8, 'F');
+    }
+    
+    doc.setTextColor(gray.r, gray.g, gray.b);
+    doc.text(row[0], margin + 3, rowY);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(navy.r, navy.g, navy.b);
+    doc.text(row[1], pageWidth - margin - 3, rowY, { align: 'right' });
+    
+    doc.setFont('helvetica', 'normal');
+  });
+
+  yPos += tableData.length * 8 + 10;
+
+  // Ausstattung
+  if (yPos > pageHeight - 60) {
+    doc.addPage();
+    yPos = margin + 30;
+  }
+
+  const ausstattungText = sections.ausstattung || '';
+  if (ausstattungText) {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
     doc.setTextColor(navy.r, navy.g, navy.b);
-    doc.text('Lage & Umgebung', margin, yPos);
-    yPos += 10;
+    doc.text('Ausstattung', margin, yPos);
+    yPos += 8;
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(11);
+    doc.setFontSize(10);
     doc.setTextColor(gray.r, gray.g, gray.b);
 
-    const lageText = sections.lage || '';
-    const lageLines = doc.splitTextToSize(lageText, pageWidth - 2 * margin);
-    lageLines.forEach(line => {
-      if (yPos > pageHeight - 80) {  // Mehr Platz für Makler-Box
-        doc.addPage();
-        yPos = margin;
-        if (uploadedLogo?.base64) {
-          try {
-            doc.addImage(uploadedLogo.base64, 'JPEG', margin, yPos, 30, 15);
-          } catch (e) {}
-        }
-        yPos += 25;
-      }
-      doc.text(line, margin, yPos);
-      yPos += 6.5;
-    });
-
-    yPos += 10;
-
-    // Fotos (falls vorhanden und Platz)
-    if (uploadedPhotos.length > 1 && yPos < pageHeight - 150) {
+    const ausstattungLines = doc.splitTextToSize(ausstattungText, pageWidth - 2 * margin);
+    ausstattungLines.forEach(line => {
       if (yPos > pageHeight - 25) {
         doc.addPage();
-        yPos = margin;
+        yPos = margin + 30;
       }
+      doc.text(line, margin, yPos);
+      yPos += 6;
+    });
+  }
 
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
-      doc.setTextColor(navy.r, navy.g, navy.b);
-      doc.text('Weitere Ansichten', margin, yPos);
-      yPos += 10;
+  // Seitenzahl
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(gray.r, gray.g, gray.b);
+  doc.text('2', pageWidth - margin, pageHeight - 10, { align: 'right' });
 
-      const photos = uploadedPhotos.slice(1, 5);
-      const gap = 8;
-      const photoWidth = (pageWidth - 2 * margin - gap) / 2;
-      const photoHeight = 55;
+  // ==================== SEITE 3: LAGE & KONTAKT ====================
+  
+  doc.addPage();
+  yPos = margin;
 
-      photos.forEach((photo, i) => {
-        const col = i % 2;
-        const row = Math.floor(i / 2);
-        const xPos = margin + (col * (photoWidth + gap));
-        const yPhotoPos = yPos + (row * (photoHeight + gap));
+  if (uploadedLogo?.base64) {
+    try {
+      doc.addImage(uploadedLogo.base64, 'JPEG', margin, yPos, 30, 15);
+    } catch (e) {}
+  }
+  yPos += 25;
 
-        try {
-          doc.addImage(photo.base64, 'JPEG', xPos, yPhotoPos, photoWidth, photoHeight);
-          doc.setDrawColor(gold.r, gold.g, gold.b);
-          doc.setLineWidth(0.2);
-          doc.rect(xPos, yPhotoPos, photoWidth, photoHeight);
-        } catch (e) {}
-      });
+  // Lage & Umgebung
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(navy.r, navy.g, navy.b);
+  doc.text('Lage & Umgebung', margin, yPos);
+  yPos += 10;
 
-      yPos += Math.ceil(photos.length / 2) * (photoHeight + gap) + 10;
-    }
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(gray.r, gray.g, gray.b);
 
-    // NEU: MAKLER-KONTAKT BOX (am Ende)
+  const lageText = sections.lage || '';
+  const lageLines = doc.splitTextToSize(lageText, pageWidth - 2 * margin);
+  lageLines.forEach(line => {
     if (yPos > pageHeight - 80) {
       doc.addPage();
-      yPos = margin + 30;
+      yPos = margin;
+      if (uploadedLogo?.base64) {
+        try {
+          doc.addImage(uploadedLogo.base64, 'JPEG', margin, yPos, 30, 15);
+        } catch (e) {}
+      }
+      yPos += 25;
     }
+    doc.text(line, margin, yPos);
+    yPos += 6.5;
+  });
 
-    yPos = Math.max(yPos, pageHeight - 75);  // Mehr Höhe für Makler-Daten
+  yPos += 10;
 
-    doc.setFillColor(gold.r, gold.g, gold.b);
-    doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 65, 2, 2, 'F');
-
-    yPos += 8;
+  // Weitere Fotos
+  if (uploadedPhotos.length > 1 && yPos < pageHeight - 150) {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
-    doc.setTextColor(255, 255, 255);
-    doc.text('Kontakt & Besichtigung', margin + 5, yPos);
+    doc.setTextColor(navy.r, navy.g, navy.b);
+    doc.text('Weitere Ansichten', margin, yPos);
     yPos += 10;
 
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
+    const photos = uploadedPhotos.slice(1, 5);
+    const gap = 8;
+    const photoWidth = (pageWidth - 2 * margin - gap) / 2;
+    const photoHeight = 55;
 
-    // Energie-Text (verkürzt)
-    const energieText = sections.energie || `Energieeffizienzklasse: ${propertyData.effizienzklasse || '—'}`;
-    const energieLines = doc.splitTextToSize(cleanLatex(energieText), pageWidth - 2 * margin - 10);
-    energieLines.slice(0, 2).forEach(line => {  // Max 2 Zeilen
+    photos.forEach((photo, i) => {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const xPos = margin + (col * (photoWidth + gap));
+      const yPhotoPos = yPos + (row * (photoHeight + gap));
+
+      try {
+        doc.addImage(photo.base64, 'JPEG', xPos, yPhotoPos, photoWidth, photoHeight);
+        doc.setDrawColor(gold.r, gold.g, gold.b);
+        doc.setLineWidth(0.2);
+        doc.rect(xPos, yPhotoPos, photoWidth, photoHeight);
+      } catch (e) {
+        console.error('Photo Error:', e);
+      }
+    });
+
+    yPos += Math.ceil(photos.length / 2) * (photoHeight + gap) + 10;
+  }
+
+  // KONTAKT-BOX (Gold, am Ende der Seite)
+  if (yPos > pageHeight - 75) {
+    doc.addPage();
+    yPos = margin + 30;
+  }
+
+  yPos = Math.max(yPos, pageHeight - 75);
+
+  doc.setFillColor(gold.r, gold.g, gold.b);
+  doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 65, 2, 2, 'F');
+
+  yPos += 8;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(255, 255, 255);
+  doc.text('Kontakt & Besichtigung', margin + 5, yPos);
+  yPos += 10;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+
+  // Energie-Info (kurz)
+  const energieText = sections.energie || `Energieeffizienzklasse: ${propertyData.effizienzklasse || '—'}`;
+  const energieLines = doc.splitTextToSize(cleanLatex(energieText), pageWidth - 2 * margin - 10);
+  energieLines.slice(0, 2).forEach(line => {
+    doc.text(line, margin + 5, yPos);
+    yPos += 5;
+  });
+
+  yPos += 3;
+
+  // MAKLER-KONTAKTDATEN
+  if (propertyData.maklerName || propertyData.maklerFirma) {
+    if (propertyData.maklerFirma) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text(propertyData.maklerFirma, margin + 5, yPos);
+      yPos += 6;
+    }
+    
+    if (propertyData.maklerName) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.text(propertyData.maklerName, margin + 5, yPos);
+      yPos += 5;
+    }
+    
+    if (propertyData.maklerTelefon) {
+      doc.text(`Tel: ${propertyData.maklerTelefon}`, margin + 5, yPos);
+      yPos += 5;
+    }
+    
+    if (propertyData.maklerEmail) {
+      doc.text(`Email: ${propertyData.maklerEmail}`, margin + 5, yPos);
+      yPos += 5;
+    }
+    
+    if (propertyData.maklerWebsite) {
+      doc.text(`Web: ${propertyData.maklerWebsite}`, margin + 5, yPos);
+      yPos += 5;
+    }
+  } else {
+    // Fallback
+    const kontaktText = sections.kontakt || 'Kontaktieren Sie uns für eine exklusive Besichtigung dieses einzigartigen Einfamilienhauses in Müllheim. Wir freuen uns darauf, Ihnen dieses außergewöhnliche Objekt zu präsentieren.';
+    const kontaktLines = doc.splitTextToSize(kontaktText, pageWidth - 2 * margin - 10);
+    kontaktLines.forEach(line => {
       doc.text(line, margin + 5, yPos);
       yPos += 5;
     });
+  }
 
-    yPos += 3;
-
-    // NEU: MAKLER-KONTAKTDATEN
-    if (propertyData.maklerName || propertyData.maklerFirma) {
-      if (propertyData.maklerFirma) {
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10);
-        doc.text(propertyData.maklerFirma, margin + 5, yPos);
-        yPos += 6;
-      }
-      
-      if (propertyData.maklerName) {
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.text(propertyData.maklerName, margin + 5, yPos);
-        yPos += 5;
-      }
-      
-      if (propertyData.maklerTelefon) {
-        doc.text(`Tel: ${propertyData.maklerTelefon}`, margin + 5, yPos);
-        yPos += 5;
-      }
-      
-      if (propertyData.maklerEmail) {
-        doc.text(`Email: ${propertyData.maklerEmail}`, margin + 5, yPos);
-        yPos += 5;
-      }
-      
-      if (propertyData.maklerWebsite) {
-        doc.text(`Web: ${propertyData.maklerWebsite}`, margin + 5, yPos);
-        yPos += 5;
-      }
-    } else {
-      // Fallback wenn keine Makler-Daten
-      const kontaktText = sections.kontakt || 'Vereinbaren Sie einen Besichtigungstermin.';
-      const kontaktLines = doc.splitTextToSize(kontaktText, pageWidth - 2 * margin - 10);
-      kontaktLines.forEach(line => {
-        doc.text(line, margin + 5, yPos);
-        yPos += 5;
-      });
-    }
-
-    // Provision
-    if (propertyData.provision) {
-      yPos += 2;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.text(`Provision: ${propertyData.provision}`, margin + 5, yPos);
-    }
-
-    // Seitenzahl
+  // Provision
+  if (propertyData.provision) {
+    yPos += 2;
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(255, 255, 255);
-    doc.text('3', pageWidth - margin, pageHeight - 10, { align: 'right' });
+    doc.setFontSize(8);
+    doc.text(`Provision: ${propertyData.provision}`, margin + 5, yPos);
+  }
 
-    const fileName = `Expose_${ortCapitalized}_${propertyData.objekttyp || 'Immobilie'}_${new Date().toISOString().split('T')[0]}.pdf`;
-    doc.save(fileName);
+  // Seitenzahl
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(255, 255, 255);
+  doc.text('3', pageWidth - margin, pageHeight - 10, { align: 'right' });
 
-    showToast('PDF erfolgreich erstellt!', 'success');
-  };
+  // PDF speichern
+  const fileName = `Expose_${ortCapitalized}_${propertyData.objekttyp || 'Immobilie'}_${new Date().toISOString().split('T')[0]}.pdf`;
+  doc.save(fileName);
+
+  showToast('PDF erfolgreich erstellt!', 'success');
+};
 
   const handleExportEmail = () => {
     const textToUse = isTextEdited ? editableText : aiGeneratedText;
