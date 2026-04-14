@@ -8,7 +8,6 @@ import {
   Maximize2
 } from 'lucide-react';
 
-// Toast Notification Component
 function Toast({ message, type = 'info', onClose }) {
   const icons = {
     success: <CheckCircle2 className="w-5 h-5 text-green-500" />,
@@ -44,24 +43,22 @@ function Toast({ message, type = 'info', onClose }) {
   );
 }
 
-// Lightbox Component (NEU!)
-// STRIPE INTEGRATION - Toggle für Demo/Live Modus
 const STRIPE_ENABLED = true;
 
 function Lightbox({ photo, onClose }) {
   if (!photo) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4"
       onClick={onClose}>
-      <button 
+      <button
         onClick={onClose}
         className="absolute top-4 right-4 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors">
         <X className="w-6 h-6 text-white" />
       </button>
-      <img 
-        src={photo.preview || photo.base64} 
+      <img
+        src={photo.preview || photo.base64}
         alt={photo.label || photo.name}
         className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl"
         onClick={(e) => e.stopPropagation()}
@@ -86,7 +83,6 @@ export default function ExposeProfiUltimateFinal() {
     ausweistyp: '', energiebedarf: '', energietraeger: '', effizienzklasse: '',
     denkmalschutz: 'Nein', erbpacht: 'Nein', einliegerwohnung: 'Nein',
     hausgeld: '', provision: '', provisionspflichtig: 'Nein', verfuegbarAb: '',
-    // NEU: Makler-Kontaktdaten
     maklerName: '',
     maklerFirma: '',
     maklerTelefon: '',
@@ -111,16 +107,10 @@ export default function ExposeProfiUltimateFinal() {
   const [isTextEdited, setIsTextEdited] = useState(false);
   const [showRestoreBanner, setShowRestoreBanner] = useState(false);
   const [toast, setToast] = useState(null);
-  
-  // NEU: Validation Errors
   const [errors, setErrors] = useState({});
-  
-  // NEU: Lightbox
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
-  // STRIPE: Processing State
-const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  
   const photoInputRef = useRef(null);
   const logoInputRef = useRef(null);
   const energyInputRef = useRef(null);
@@ -147,16 +137,13 @@ const [isProcessingPayment, setIsProcessingPayment] = useState(false);
     technikKomfort: ['Aufzug', 'Barrierefrei', 'Smart Home', 'Klimaanlage', 'Photovoltaik', 'Wärmepumpe', 'Videosprechanlage', 'Alarmanlage', 'Rollläden elektrisch', 'Zentralstaubsauger']
   };
 
-  // Toast Helper
   const showToast = (message, type = 'info') => {
     setToast({ message, type });
   };
 
-  // NEU: Validation Helper
   const validateField = (field, value) => {
     const newErrors = { ...errors };
-    
-    // Pflichtfelder
+
     const requiredFields = {
       objekttyp: 'Bitte wählen Sie einen Objekttyp',
       vermarktungsart: 'Bitte wählen Sie Verkauf oder Vermietung',
@@ -170,12 +157,10 @@ const [isProcessingPayment, setIsProcessingPayment] = useState(false);
       delete newErrors[field];
     }
 
-    // Email Validation
     if (field === 'maklerEmail' && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
       newErrors[field] = 'Ungültige E-Mail-Adresse';
     }
 
-    // Telefon Validation (optional, nur wenn was eingegeben)
     if (field === 'maklerTelefon' && value && !/^[\d\s\+\-\(\)]+$/.test(value)) {
       newErrors[field] = 'Ungültige Telefonnummer';
     }
@@ -183,7 +168,6 @@ const [isProcessingPayment, setIsProcessingPayment] = useState(false);
     setErrors(newErrors);
   };
 
-  // localStorage Auto-Save
   useEffect(() => {
     const saveInterval = setInterval(() => {
       const dataToSave = {
@@ -199,7 +183,6 @@ const [isProcessingPayment, setIsProcessingPayment] = useState(false);
     return () => clearInterval(saveInterval);
   }, [propertyData, uploadedPhotos, aiGeneratedText, editableText]);
 
-  // Restore auf Mount
   useEffect(() => {
     const saved = localStorage.getItem('expose-profi-autosave');
     if (saved) {
@@ -208,7 +191,6 @@ const [isProcessingPayment, setIsProcessingPayment] = useState(false);
         const savedTime = new Date(data.timestamp);
         const now = new Date();
         const hoursSince = (now - savedTime) / (1000 * 60 * 60);
-        
         if (hoursSince < 24) {
           setShowRestoreBanner(true);
         }
@@ -216,19 +198,16 @@ const [isProcessingPayment, setIsProcessingPayment] = useState(false);
     }
   }, []);
 
-  // NEU: Unsaved Changes Warning
   useEffect(() => {
     const handleBeforeUnload = (e) => {
-      const hasData = Object.keys(propertyData).some(k => 
+      const hasData = Object.keys(propertyData).some(k =>
         Array.isArray(propertyData[k]) ? propertyData[k].length > 0 : propertyData[k]
       );
-      
       if (hasData || uploadedPhotos.length > 0 || aiGeneratedText) {
         e.preventDefault();
         e.returnValue = '';
       }
     };
-    
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [propertyData, uploadedPhotos, aiGeneratedText]);
@@ -240,10 +219,7 @@ const [isProcessingPayment, setIsProcessingPayment] = useState(false);
         const data = JSON.parse(saved);
         setPropertyData(data.propertyData || propertyData);
         if (data.uploadedPhotos) {
-          const restoredPhotos = data.uploadedPhotos.map(p => ({
-            ...p,
-            preview: p.base64
-          }));
+          const restoredPhotos = data.uploadedPhotos.map(p => ({ ...p, preview: p.base64 }));
           setUploadedPhotos(restoredPhotos);
         }
         setAiGeneratedText(data.aiGeneratedText || '');
@@ -262,87 +238,76 @@ const [isProcessingPayment, setIsProcessingPayment] = useState(false);
     showToast('Gespeicherte Daten gelöscht', 'info');
   };
 
-// URL Parameter Check & Payment Success Handler
-useEffect(() => {
-  const params = new URLSearchParams(window.location.search);
-  
-  if (params.get('success') === 'true') {
-    console.log('[PAYMENT] ✅ Erfolgreicher Rücksprung von Stripe!');
-    
-    const savedPaymentData = localStorage.getItem('expose-profi-payment-pending');
-    
-    if (savedPaymentData) {
-      try {
-        const data = JSON.parse(savedPaymentData);
-        console.log('[PAYMENT] 📦 Stelle Daten wieder her...');
-        
-        setPropertyData(data.propertyData || {});
-        
-        if (data.uploadedPhotos && data.uploadedPhotos.length > 0) {
-          const restoredPhotos = data.uploadedPhotos.map(p => ({
-            ...p,
-            preview: p.base64
-          }));
-          setUploadedPhotos(restoredPhotos);
-        }
-        
-        if (data.uploadedLogo) {
-          setUploadedLogo({
-            ...data.uploadedLogo,
-            preview: data.uploadedLogo.base64
-          });
-        }
-        
-        if (data.uploadedEnergyCert) {
-          setUploadedEnergyCert(data.uploadedEnergyCert);
-        }
-        
-        setAiGeneratedText(data.aiGeneratedText || '');
-        setEditableText(data.editableText || '');
-        setIsTextEdited(data.isTextEdited || false);
-        setSelectedTonality(data.selectedTonality || 'professional');
-        
-        setIsUnlocked(true);
-        
-        localStorage.removeItem('expose-profi-payment-pending');
-        
-        console.log('[PAYMENT] 🎉 Wiederherstellung erfolgreich!');
-        showToast('🎉 Zahlung erfolgreich! Exposé freigeschaltet.', 'success');
-        
-      } catch (e) {
-        console.error('[PAYMENT] ❌ Fehler beim Wiederherstellen:', e);
-        showToast('Daten konnten nicht wiederhergestellt werden. Bitte erstellen Sie das Exposé erneut.', 'error');
-      }
-    } else {
-      console.warn('[PAYMENT] ⚠️ Keine Payment-Daten gefunden!');
-      setIsUnlocked(true);
-      showToast('Zahlung erfolgreich!', 'success');
-    }
-    
-    window.history.replaceState({}, '', window.location.pathname);
-  }
-  
-  const checkOldPaymentData = () => {
-    const savedData = localStorage.getItem('expose-profi-payment-pending');
-    if (savedData) {
-      try {
-        const data = JSON.parse(savedData);
-        const savedTime = new Date(data.timestamp);
-        const now = new Date();
-        const hoursSince = (now - savedTime) / (1000 * 60 * 60);
-        
-        if (hoursSince > 1) {
-          console.log('[PAYMENT] 🧹 Alte Payment-Daten gelöscht (>1h)');
-          localStorage.removeItem('expose-profi-payment-pending');
-        }
-      } catch (e) {}
-    }
-  };
-  
-  checkOldPaymentData();
-}, []);
-```
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
 
+    if (params.get('success') === 'true') {
+      console.log('[PAYMENT] ✅ Erfolgreicher Rücksprung von Stripe!');
+
+      const savedPaymentData = localStorage.getItem('expose-profi-payment-pending');
+
+      if (savedPaymentData) {
+        try {
+          const data = JSON.parse(savedPaymentData);
+          console.log('[PAYMENT] 📦 Stelle Daten wieder her...');
+
+          setPropertyData(data.propertyData || {});
+
+          if (data.uploadedPhotos && data.uploadedPhotos.length > 0) {
+            const restoredPhotos = data.uploadedPhotos.map(p => ({ ...p, preview: p.base64 }));
+            setUploadedPhotos(restoredPhotos);
+          }
+
+          if (data.uploadedLogo) {
+            setUploadedLogo({ ...data.uploadedLogo, preview: data.uploadedLogo.base64 });
+          }
+
+          if (data.uploadedEnergyCert) {
+            setUploadedEnergyCert(data.uploadedEnergyCert);
+          }
+
+          setAiGeneratedText(data.aiGeneratedText || '');
+          setEditableText(data.editableText || '');
+          setIsTextEdited(data.isTextEdited || false);
+          setSelectedTonality(data.selectedTonality || 'professional');
+          setIsUnlocked(true);
+
+          localStorage.removeItem('expose-profi-payment-pending');
+
+          console.log('[PAYMENT] 🎉 Wiederherstellung erfolgreich!');
+          showToast('🎉 Zahlung erfolgreich! Exposé freigeschaltet.', 'success');
+
+        } catch (e) {
+          console.error('[PAYMENT] ❌ Fehler beim Wiederherstellen:', e);
+          showToast('Daten konnten nicht wiederhergestellt werden. Bitte erstellen Sie das Exposé erneut.', 'error');
+        }
+      } else {
+        console.warn('[PAYMENT] ⚠️ Keine Payment-Daten gefunden!');
+        setIsUnlocked(true);
+        showToast('Zahlung erfolgreich!', 'success');
+      }
+
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
+    const checkOldPaymentData = () => {
+      const savedData = localStorage.getItem('expose-profi-payment-pending');
+      if (savedData) {
+        try {
+          const data = JSON.parse(savedData);
+          const savedTime = new Date(data.timestamp);
+          const now = new Date();
+          const hoursSince = (now - savedTime) / (1000 * 60 * 60);
+          if (hoursSince > 1) {
+            console.log('[PAYMENT] 🧹 Alte Payment-Daten gelöscht (>1h)');
+            localStorage.removeItem('expose-profi-payment-pending');
+          }
+        } catch (e) {}
+      }
+    };
+
+    checkOldPaymentData();
+  }, []);
 
   const scrollToStudio = () => studioRef.current?.scrollIntoView({ behavior: 'smooth' });
 
@@ -409,11 +374,12 @@ useEffect(() => {
         });
       }
       setUploadedPhotos(prev => [...prev, ...newPhotos]);
-showToast(`${newPhotos.length} Foto(s) hochgeladen`, 'success');
+      showToast(`${newPhotos.length} Foto(s) hochgeladen`, 'success');
     } catch (e) {
       showToast('Fehler beim Verarbeiten der Fotos', 'error');
     }
   };
+
   const handleLogoUpload = async (e) => {
     const file = e.target.files[0];
     if (!file || !file.type.startsWith('image/')) return;
@@ -449,13 +415,13 @@ showToast(`${newPhotos.length} Foto(s) hochgeladen`, 'success');
       }
       setUploadedEnergyCert({ id: Date.now(), name: file.name, base64 });
       setEnergyUploadStatus('extracting');
-      
+
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode: 'ocr', energyCertificate: base64 })
       });
-      
+
       const data = await response.json();
       if (data.success && data.data) {
         setPropertyData(prev => ({
@@ -499,7 +465,6 @@ showToast(`${newPhotos.length} Foto(s) hochgeladen`, 'success');
   };
 
   const handleGenerate = async (tonality = selectedTonality) => {
-    // NEU: Validierung aller Pflichtfelder
     const newErrors = {};
     if (!propertyData.objekttyp) newErrors.objekttyp = 'Pflichtfeld';
     if (!propertyData.vermarktungsart) newErrors.vermarktungsart = 'Pflichtfeld';
@@ -525,7 +490,7 @@ showToast(`${newPhotos.length} Foto(s) hochgeladen`, 'success');
       }, 300);
 
       const photos = uploadedPhotos.map(p => ({ base64: p.base64, label: p.label }));
-      
+
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -541,7 +506,7 @@ showToast(`${newPhotos.length} Foto(s) hochgeladen`, 'success');
       setGenerationProgress(100);
 
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.message || 'Generierung fehlgeschlagen');
       }
@@ -551,7 +516,7 @@ showToast(`${newPhotos.length} Foto(s) hochgeladen`, 'success');
         setEditableText(data.text);
         setSelectedTonality(tonality);
         showToast(`Exposé generiert (${tonality === 'professional' ? 'Professionell' : tonality === 'emotional' ? 'Emotional' : 'Luxuriös'})`, 'success');
-        
+
         if (data.rateLimit && data.rateLimit.remaining <= 3) {
           setTimeout(() => {
             showToast(`Noch ${data.rateLimit.remaining} Generierungen in diesem Zeitfenster möglich`, 'warning');
@@ -584,7 +549,7 @@ showToast(`${newPhotos.length} Foto(s) hochgeladen`, 'success');
 
   const openPayment = () => setShowPaymentModal(true);
   const closePayment = () => setShowPaymentModal(false);
-  
+
   const handlePaymentSuccess = () => {
     setIsUnlocked(true);
     setShowPaymentModal(false);
@@ -643,418 +608,383 @@ showToast(`${newPhotos.length} Foto(s) hochgeladen`, 'success');
       .replace(/\bqm\b/gi, 'm²');
   };
 
-const handleExportPDF = () => {
-  const { jsPDF } = window.jspdf;
-  if (!jsPDF) {
-    showToast('PDF-Bibliothek nicht geladen. Bitte Seite neu laden.', 'error');
-    return;
-  }
-
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 20;
-
-  const gold = { r: 197, g: 160, b: 89 };
-  const navy = { r: 10, g: 25, b: 47 };
-  const gray = { r: 100, g: 100, b: 100 };
-  const lightGray = { r: 245, g: 245, b: 245 };
-
-  const textToUse = isTextEdited ? editableText : aiGeneratedText;
-  const cleanedText = cleanLatex(textToUse);
-  const sections = parseTextSections(cleanedText);
-  const ortCapitalized = capitalizeFirst(propertyData.ort || 'Lage');
-
-  // ==================== SEITE 1: COVER ====================
-  
-  // Hintergrund
-  doc.setFillColor(navy.r, navy.g, navy.b);
-  doc.rect(0, 0, pageWidth, pageHeight, 'F');
-
-  // Logo oben links
-  if (uploadedLogo?.base64) {
-    try {
-      doc.addImage(uploadedLogo.base64, 'JPEG', margin, margin, 40, 20);
-    } catch (e) {
-      console.error('Logo Error:', e);
+  const handleExportPDF = () => {
+    const { jsPDF } = window.jspdf;
+    if (!jsPDF) {
+      showToast('PDF-Bibliothek nicht geladen. Bitte Seite neu laden.', 'error');
+      return;
     }
-  }
 
-  // Hauptfoto (großes Hero-Bild)
-  if (uploadedPhotos.length > 0) {
-    try {
-      const heroPhoto = uploadedPhotos[0];
-      const photoHeight = 120;
-      const photoY = 60;
-      doc.addImage(heroPhoto.base64, 'JPEG', margin, photoY, pageWidth - 2 * margin, photoHeight);
-      
-      // Goldener Rahmen um Foto
-      doc.setDrawColor(gold.r, gold.g, gold.b);
-      doc.setLineWidth(1);
-      doc.rect(margin, photoY, pageWidth - 2 * margin, photoHeight);
-    } catch (e) {
-      console.error('Hero Photo Error:', e);
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 20;
+
+    const gold = { r: 197, g: 160, b: 89 };
+    const navy = { r: 10, g: 25, b: 47 };
+    const gray = { r: 100, g: 100, b: 100 };
+    const lightGray = { r: 245, g: 245, b: 245 };
+
+    const textToUse = isTextEdited ? editableText : aiGeneratedText;
+    const cleanedText = cleanLatex(textToUse);
+    const sections = parseTextSections(cleanedText);
+    const ortCapitalized = capitalizeFirst(propertyData.ort || 'Lage');
+
+    // ==================== SEITE 1: COVER ====================
+
+    doc.setFillColor(navy.r, navy.g, navy.b);
+    doc.rect(0, 0, pageWidth, pageHeight, 'F');
+
+    if (uploadedLogo?.base64) {
+      try {
+        doc.addImage(uploadedLogo.base64, 'JPEG', margin, margin, 40, 20);
+      } catch (e) {
+        console.error('Logo Error:', e);
+      }
     }
-  }
 
-  // Headline
-  let yPos = uploadedPhotos.length > 0 ? 195 : 100;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(24);
-  doc.setTextColor(255, 255, 255);
-  
-  const headlineText = sections.headline || `${propertyData.objekttyp || 'Immobilie'} in ${ortCapitalized}`;
-  const headlineLines = doc.splitTextToSize(headlineText, pageWidth - 2 * margin);
-  headlineLines.forEach(line => {
-    doc.text(line, pageWidth / 2, yPos, { align: 'center' });
-    yPos += 10;
-  });
-
-  // Goldene Trennlinie
-  yPos += 5;
-  doc.setDrawColor(gold.r, gold.g, gold.b);
-  doc.setLineWidth(0.5);
-  doc.line(margin + 20, yPos, pageWidth - margin - 20, yPos);
-  yPos += 10;
-
-  // Einleitung
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(12);
-  doc.setTextColor(255, 255, 255);
-  
-  const einleitungText = sections.einleitung || '';
-  const einleitungLines = doc.splitTextToSize(einleitungText, pageWidth - 2 * margin - 20);
-  einleitungLines.forEach(line => {
-    if (yPos > pageHeight - 30) {
-      doc.addPage();
-      yPos = margin;
+    if (uploadedPhotos.length > 0) {
+      try {
+        const heroPhoto = uploadedPhotos[0];
+        const photoHeight = 120;
+        const photoY = 60;
+        doc.addImage(heroPhoto.base64, 'JPEG', margin, photoY, pageWidth - 2 * margin, photoHeight);
+        doc.setDrawColor(gold.r, gold.g, gold.b);
+        doc.setLineWidth(1);
+        doc.rect(margin, photoY, pageWidth - 2 * margin, photoHeight);
+      } catch (e) {
+        console.error('Hero Photo Error:', e);
+      }
     }
-    doc.text(line, pageWidth / 2, yPos, { align: 'center' });
-    yPos += 7;
-  });
 
-  // Key Facts Boxen (am unteren Rand)
-  const keyFactsY = pageHeight - 50;
-  const boxWidth = (pageWidth - 2 * margin - 16) / 3;
-  const facts = [
-    { label: 'Wohnfläche', value: propertyData.wohnflaeche ? `${propertyData.wohnflaeche} m²` : '—' },
-    { label: 'Zimmer', value: propertyData.zimmer || '—' },
-    { label: 'Preis', value: propertyData.preis ? `${parseInt(propertyData.preis).toLocaleString('de-DE')} €` : 'auf Anfrage' }
-  ];
-
-  facts.forEach((fact, i) => {
-    const xPos = margin + (i * (boxWidth + 8));
-    
-    doc.setFillColor(gold.r, gold.g, gold.b);
-    doc.roundedRect(xPos, keyFactsY, boxWidth, 25, 2, 2, 'F');
-    
+    let yPos = uploadedPhotos.length > 0 ? 195 : 100;
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(16);
-    doc.setTextColor(navy.r, navy.g, navy.b);
-    doc.text(fact.value, xPos + boxWidth / 2, keyFactsY + 10, { align: 'center' });
-    
+    doc.setFontSize(24);
+    doc.setTextColor(255, 255, 255);
+
+    const headlineText = sections.headline || `${propertyData.objekttyp || 'Immobilie'} in ${ortCapitalized}`;
+    const headlineLines = doc.splitTextToSize(headlineText, pageWidth - 2 * margin);
+    headlineLines.forEach(line => {
+      doc.text(line, pageWidth / 2, yPos, { align: 'center' });
+      yPos += 10;
+    });
+
+    yPos += 5;
+    doc.setDrawColor(gold.r, gold.g, gold.b);
+    doc.setLineWidth(0.5);
+    doc.line(margin + 20, yPos, pageWidth - margin - 20, yPos);
+    yPos += 10;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(12);
+    doc.setTextColor(255, 255, 255);
+
+    const einleitungText = sections.einleitung || '';
+    const einleitungLines = doc.splitTextToSize(einleitungText, pageWidth - 2 * margin - 20);
+    einleitungLines.forEach(line => {
+      if (yPos > pageHeight - 30) {
+        doc.addPage();
+        yPos = margin;
+      }
+      doc.text(line, pageWidth / 2, yPos, { align: 'center' });
+      yPos += 7;
+    });
+
+    const keyFactsY = pageHeight - 50;
+    const boxWidth = (pageWidth - 2 * margin - 16) / 3;
+    const facts = [
+      { label: 'Wohnfläche', value: propertyData.wohnflaeche ? `${propertyData.wohnflaeche} m²` : '—' },
+      { label: 'Zimmer', value: propertyData.zimmer || '—' },
+      { label: 'Preis', value: propertyData.preis ? `${parseInt(propertyData.preis).toLocaleString('de-DE')} €` : 'auf Anfrage' }
+    ];
+
+    facts.forEach((fact, i) => {
+      const xPos = margin + (i * (boxWidth + 8));
+      doc.setFillColor(gold.r, gold.g, gold.b);
+      doc.roundedRect(xPos, keyFactsY, boxWidth, 25, 2, 2, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+      doc.setTextColor(navy.r, navy.g, navy.b);
+      doc.text(fact.value, xPos + boxWidth / 2, keyFactsY + 10, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.text(fact.label, xPos + boxWidth / 2, keyFactsY + 18, { align: 'center' });
+    });
+
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    doc.text(fact.label, xPos + boxWidth / 2, keyFactsY + 18, { align: 'center' });
-  });
+    doc.setTextColor(255, 255, 255);
+    doc.text('1', pageWidth - margin, pageHeight - 10, { align: 'right' });
 
-  // Seitenzahl
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(255, 255, 255);
-  doc.text('1', pageWidth - margin, pageHeight - 10, { align: 'right' });
+    // ==================== SEITE 2: DETAILS ====================
 
-  // ==================== SEITE 2: DETAILS ====================
-  
-  doc.addPage();
-  yPos = margin;
-
-  // Logo
-  if (uploadedLogo?.base64) {
-    try {
-      doc.addImage(uploadedLogo.base64, 'JPEG', margin, yPos, 30, 15);
-    } catch (e) {}
-  }
-  yPos += 25;
-
-  // Objektbeschreibung
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.setTextColor(navy.r, navy.g, navy.b);
-  doc.text('Das Objekt', margin, yPos);
-  yPos += 10;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(11);
-  doc.setTextColor(gray.r, gray.g, gray.b);
-
-  const objektText = sections.objekt || '';
-  const objektLines = doc.splitTextToSize(objektText, pageWidth - 2 * margin);
-  objektLines.forEach(line => {
-    if (yPos > pageHeight - 25) {
-      doc.addPage();
-      yPos = margin;
-      if (uploadedLogo?.base64) {
-        try {
-          doc.addImage(uploadedLogo.base64, 'JPEG', margin, yPos, 30, 15);
-        } catch (e) {}
-      }
-      yPos += 25;
-    }
-    doc.text(line, margin, yPos);
-    yPos += 6.5;
-  });
-
-  yPos += 10;
-
-  // Objektdaten Tabelle
-  if (yPos > pageHeight - 80) {
     doc.addPage();
-    yPos = margin + 30;
-  }
+    yPos = margin;
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.setTextColor(navy.r, navy.g, navy.b);
-  doc.text('Objektdaten', margin, yPos);
-  yPos += 8;
-
-  const tableData = [
-    ['Objekttyp', propertyData.objekttyp || '—'],
-    ['Wohnfläche', propertyData.wohnflaeche ? `${propertyData.wohnflaeche} m²` : '—'],
-    ['Zimmer', propertyData.zimmer || '—'],
-    ['Baujahr', propertyData.baujahr || '—'],
-    ['Zustand', propertyData.zustand || '—'],
-    ['Heizung', propertyData.heizung || '—']
-  ];
-
-  if (propertyData.grundstueck) {
-    tableData.push(['Grundstück', `${propertyData.grundstueck} m²`]);
-  }
-
-  doc.setFillColor(lightGray.r, lightGray.g, lightGray.b);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-
-  tableData.forEach((row, i) => {
-    const rowY = yPos + (i * 8);
-    
-    if (i % 2 === 0) {
-      doc.rect(margin, rowY - 5, pageWidth - 2 * margin, 8, 'F');
+    if (uploadedLogo?.base64) {
+      try {
+        doc.addImage(uploadedLogo.base64, 'JPEG', margin, yPos, 30, 15);
+      } catch (e) {}
     }
-    
-    doc.setTextColor(gray.r, gray.g, gray.b);
-    doc.text(row[0], margin + 3, rowY);
-    
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(navy.r, navy.g, navy.b);
-    doc.text(row[1], pageWidth - margin - 3, rowY, { align: 'right' });
-    
-    doc.setFont('helvetica', 'normal');
-  });
+    yPos += 25;
 
-  yPos += tableData.length * 8 + 10;
-
-  // Ausstattung
-  if (yPos > pageHeight - 60) {
-    doc.addPage();
-    yPos = margin + 30;
-  }
-
-  const ausstattungText = sections.ausstattung || '';
-  if (ausstattungText) {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
     doc.setTextColor(navy.r, navy.g, navy.b);
-    doc.text('Ausstattung', margin, yPos);
-    yPos += 8;
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.setTextColor(gray.r, gray.g, gray.b);
-
-    const ausstattungLines = doc.splitTextToSize(ausstattungText, pageWidth - 2 * margin);
-    ausstattungLines.forEach(line => {
-      if (yPos > pageHeight - 25) {
-        doc.addPage();
-        yPos = margin + 30;
-      }
-      doc.text(line, margin, yPos);
-      yPos += 6;
-    });
-  }
-
-  // Seitenzahl
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(gray.r, gray.g, gray.b);
-  doc.text('2', pageWidth - margin, pageHeight - 10, { align: 'right' });
-
-  // ==================== SEITE 3: LAGE & KONTAKT ====================
-  
-  doc.addPage();
-  yPos = margin;
-
-  if (uploadedLogo?.base64) {
-    try {
-      doc.addImage(uploadedLogo.base64, 'JPEG', margin, yPos, 30, 15);
-    } catch (e) {}
-  }
-  yPos += 25;
-
-  // Lage & Umgebung
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.setTextColor(navy.r, navy.g, navy.b);
-  doc.text('Lage & Umgebung', margin, yPos);
-  yPos += 10;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(11);
-  doc.setTextColor(gray.r, gray.g, gray.b);
-
-  const lageText = sections.lage || '';
-  const lageLines = doc.splitTextToSize(lageText, pageWidth - 2 * margin);
-  lageLines.forEach(line => {
-    if (yPos > pageHeight - 80) {
-      doc.addPage();
-      yPos = margin;
-      if (uploadedLogo?.base64) {
-        try {
-          doc.addImage(uploadedLogo.base64, 'JPEG', margin, yPos, 30, 15);
-        } catch (e) {}
-      }
-      yPos += 25;
-    }
-    doc.text(line, margin, yPos);
-    yPos += 6.5;
-  });
-
-  yPos += 10;
-
-  // Weitere Fotos
-  if (uploadedPhotos.length > 1 && yPos < pageHeight - 150) {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.setTextColor(navy.r, navy.g, navy.b);
-    doc.text('Weitere Ansichten', margin, yPos);
+    doc.text('Das Objekt', margin, yPos);
     yPos += 10;
 
-    const photos = uploadedPhotos.slice(1, 5);
-    const gap = 8;
-    const photoWidth = (pageWidth - 2 * margin - gap) / 2;
-    const photoHeight = 55;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(gray.r, gray.g, gray.b);
 
-    photos.forEach((photo, i) => {
-      const col = i % 2;
-      const row = Math.floor(i / 2);
-      const xPos = margin + (col * (photoWidth + gap));
-      const yPhotoPos = yPos + (row * (photoHeight + gap));
-
-      try {
-        doc.addImage(photo.base64, 'JPEG', xPos, yPhotoPos, photoWidth, photoHeight);
-        doc.setDrawColor(gold.r, gold.g, gold.b);
-        doc.setLineWidth(0.2);
-        doc.rect(xPos, yPhotoPos, photoWidth, photoHeight);
-      } catch (e) {
-        console.error('Photo Error:', e);
+    const objektText = sections.objekt || '';
+    const objektLines = doc.splitTextToSize(objektText, pageWidth - 2 * margin);
+    objektLines.forEach(line => {
+      if (yPos > pageHeight - 25) {
+        doc.addPage();
+        yPos = margin;
+        if (uploadedLogo?.base64) {
+          try {
+            doc.addImage(uploadedLogo.base64, 'JPEG', margin, yPos, 30, 15);
+          } catch (e) {}
+        }
+        yPos += 25;
       }
+      doc.text(line, margin, yPos);
+      yPos += 6.5;
     });
 
-    yPos += Math.ceil(photos.length / 2) * (photoHeight + gap) + 10;
-  }
+    yPos += 10;
 
-  // KONTAKT-BOX (Gold, am Ende der Seite)
-  if (yPos > pageHeight - 75) {
-    doc.addPage();
-    yPos = margin + 30;
-  }
+    if (yPos > pageHeight - 80) {
+      doc.addPage();
+      yPos = margin + 30;
+    }
 
-  yPos = Math.max(yPos, pageHeight - 75);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(navy.r, navy.g, navy.b);
+    doc.text('Objektdaten', margin, yPos);
+    yPos += 8;
 
-  doc.setFillColor(gold.r, gold.g, gold.b);
-  doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 65, 2, 2, 'F');
+    const tableData = [
+      ['Objekttyp', propertyData.objekttyp || '—'],
+      ['Wohnfläche', propertyData.wohnflaeche ? `${propertyData.wohnflaeche} m²` : '—'],
+      ['Zimmer', propertyData.zimmer || '—'],
+      ['Baujahr', propertyData.baujahr || '—'],
+      ['Zustand', propertyData.zustand || '—'],
+      ['Heizung', propertyData.heizung || '—']
+    ];
 
-  yPos += 8;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.setTextColor(255, 255, 255);
-  doc.text('Kontakt & Besichtigung', margin + 5, yPos);
-  yPos += 10;
+    if (propertyData.grundstueck) {
+      tableData.push(['Grundstück', `${propertyData.grundstueck} m²`]);
+    }
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
+    doc.setFillColor(lightGray.r, lightGray.g, lightGray.b);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
 
-  // Energie-Info (kurz)
-  const energieText = sections.energie || `Energieeffizienzklasse: ${propertyData.effizienzklasse || '—'}`;
-  const energieLines = doc.splitTextToSize(cleanLatex(energieText), pageWidth - 2 * margin - 10);
-  energieLines.slice(0, 2).forEach(line => {
-    doc.text(line, margin + 5, yPos);
-    yPos += 5;
-  });
-
-  yPos += 3;
-
-  // MAKLER-KONTAKTDATEN
-  if (propertyData.maklerName || propertyData.maklerFirma) {
-    if (propertyData.maklerFirma) {
+    tableData.forEach((row, i) => {
+      const rowY = yPos + (i * 8);
+      if (i % 2 === 0) {
+        doc.rect(margin, rowY - 5, pageWidth - 2 * margin, 8, 'F');
+      }
+      doc.setTextColor(gray.r, gray.g, gray.b);
+      doc.text(row[0], margin + 3, rowY);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.text(propertyData.maklerFirma, margin + 5, yPos);
-      yPos += 6;
-    }
-    
-    if (propertyData.maklerName) {
+      doc.setTextColor(navy.r, navy.g, navy.b);
+      doc.text(row[1], pageWidth - margin - 3, rowY, { align: 'right' });
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.text(propertyData.maklerName, margin + 5, yPos);
-      yPos += 5;
+    });
+
+    yPos += tableData.length * 8 + 10;
+
+    if (yPos > pageHeight - 60) {
+      doc.addPage();
+      yPos = margin + 30;
     }
-    
-    if (propertyData.maklerTelefon) {
-      doc.text(`Tel: ${propertyData.maklerTelefon}`, margin + 5, yPos);
-      yPos += 5;
+
+    const ausstattungText = sections.ausstattung || '';
+    if (ausstattungText) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(navy.r, navy.g, navy.b);
+      doc.text('Ausstattung', margin, yPos);
+      yPos += 8;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(gray.r, gray.g, gray.b);
+
+      const ausstattungLines = doc.splitTextToSize(ausstattungText, pageWidth - 2 * margin);
+      ausstattungLines.forEach(line => {
+        if (yPos > pageHeight - 25) {
+          doc.addPage();
+          yPos = margin + 30;
+        }
+        doc.text(line, margin, yPos);
+        yPos += 6;
+      });
     }
-    
-    if (propertyData.maklerEmail) {
-      doc.text(`Email: ${propertyData.maklerEmail}`, margin + 5, yPos);
-      yPos += 5;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(gray.r, gray.g, gray.b);
+    doc.text('2', pageWidth - margin, pageHeight - 10, { align: 'right' });
+
+    // ==================== SEITE 3: LAGE & KONTAKT ====================
+
+    doc.addPage();
+    yPos = margin;
+
+    if (uploadedLogo?.base64) {
+      try {
+        doc.addImage(uploadedLogo.base64, 'JPEG', margin, yPos, 30, 15);
+      } catch (e) {}
     }
-    
-    if (propertyData.maklerWebsite) {
-      doc.text(`Web: ${propertyData.maklerWebsite}`, margin + 5, yPos);
-      yPos += 5;
+    yPos += 25;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(navy.r, navy.g, navy.b);
+    doc.text('Lage & Umgebung', margin, yPos);
+    yPos += 10;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(gray.r, gray.g, gray.b);
+
+    const lageText = sections.lage || '';
+    const lageLines = doc.splitTextToSize(lageText, pageWidth - 2 * margin);
+    lageLines.forEach(line => {
+      if (yPos > pageHeight - 80) {
+        doc.addPage();
+        yPos = margin;
+        if (uploadedLogo?.base64) {
+          try {
+            doc.addImage(uploadedLogo.base64, 'JPEG', margin, yPos, 30, 15);
+          } catch (e) {}
+        }
+        yPos += 25;
+      }
+      doc.text(line, margin, yPos);
+      yPos += 6.5;
+    });
+
+    yPos += 10;
+
+    if (uploadedPhotos.length > 1 && yPos < pageHeight - 150) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(navy.r, navy.g, navy.b);
+      doc.text('Weitere Ansichten', margin, yPos);
+      yPos += 10;
+
+      const extraPhotos = uploadedPhotos.slice(1, 5);
+      const gap = 8;
+      const photoWidth = (pageWidth - 2 * margin - gap) / 2;
+      const photoHeight = 55;
+
+      extraPhotos.forEach((photo, i) => {
+        const col = i % 2;
+        const row = Math.floor(i / 2);
+        const xPos = margin + (col * (photoWidth + gap));
+        const yPhotoPos = yPos + (row * (photoHeight + gap));
+
+        try {
+          doc.addImage(photo.base64, 'JPEG', xPos, yPhotoPos, photoWidth, photoHeight);
+          doc.setDrawColor(gold.r, gold.g, gold.b);
+          doc.setLineWidth(0.2);
+          doc.rect(xPos, yPhotoPos, photoWidth, photoHeight);
+        } catch (e) {
+          console.error('Photo Error:', e);
+        }
+      });
+
+      yPos += Math.ceil(extraPhotos.length / 2) * (photoHeight + gap) + 10;
     }
-  } else {
-    // Fallback
-    const kontaktText = sections.kontakt || 'Kontaktieren Sie uns für eine exklusive Besichtigung dieses einzigartigen Einfamilienhauses in Müllheim. Wir freuen uns darauf, Ihnen dieses außergewöhnliche Objekt zu präsentieren.';
-    const kontaktLines = doc.splitTextToSize(kontaktText, pageWidth - 2 * margin - 10);
-    kontaktLines.forEach(line => {
+
+    if (yPos > pageHeight - 75) {
+      doc.addPage();
+      yPos = margin + 30;
+    }
+
+    yPos = Math.max(yPos, pageHeight - 75);
+
+    doc.setFillColor(gold.r, gold.g, gold.b);
+    doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 65, 2, 2, 'F');
+
+    yPos += 8;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(255, 255, 255);
+    doc.text('Kontakt & Besichtigung', margin + 5, yPos);
+    yPos += 10;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+
+    const energieText = sections.energie || `Energieeffizienzklasse: ${propertyData.effizienzklasse || '—'}`;
+    const energieLines = doc.splitTextToSize(cleanLatex(energieText), pageWidth - 2 * margin - 10);
+    energieLines.slice(0, 2).forEach(line => {
       doc.text(line, margin + 5, yPos);
       yPos += 5;
     });
-  }
 
-  // Provision
-  if (propertyData.provision) {
-    yPos += 2;
+    yPos += 3;
+
+    if (propertyData.maklerName || propertyData.maklerFirma) {
+      if (propertyData.maklerFirma) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.text(propertyData.maklerFirma, margin + 5, yPos);
+        yPos += 6;
+      }
+      if (propertyData.maklerName) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text(propertyData.maklerName, margin + 5, yPos);
+        yPos += 5;
+      }
+      if (propertyData.maklerTelefon) {
+        doc.text(`Tel: ${propertyData.maklerTelefon}`, margin + 5, yPos);
+        yPos += 5;
+      }
+      if (propertyData.maklerEmail) {
+        doc.text(`Email: ${propertyData.maklerEmail}`, margin + 5, yPos);
+        yPos += 5;
+      }
+      if (propertyData.maklerWebsite) {
+        doc.text(`Web: ${propertyData.maklerWebsite}`, margin + 5, yPos);
+        yPos += 5;
+      }
+    } else {
+      const kontaktText = sections.kontakt || 'Kontaktieren Sie uns für eine exklusive Besichtigung.';
+      const kontaktLines = doc.splitTextToSize(kontaktText, pageWidth - 2 * margin - 10);
+      kontaktLines.forEach(line => {
+        doc.text(line, margin + 5, yPos);
+        yPos += 5;
+      });
+    }
+
+    if (propertyData.provision) {
+      yPos += 2;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text(`Provision: ${propertyData.provision}`, margin + 5, yPos);
+    }
+
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.text(`Provision: ${propertyData.provision}`, margin + 5, yPos);
-  }
+    doc.setFontSize(9);
+    doc.setTextColor(255, 255, 255);
+    doc.text('3', pageWidth - margin, pageHeight - 10, { align: 'right' });
 
-  // Seitenzahl
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(255, 255, 255);
-  doc.text('3', pageWidth - margin, pageHeight - 10, { align: 'right' });
+    const fileName = `Expose_${ortCapitalized}_${propertyData.objekttyp || 'Immobilie'}_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
 
-  // PDF speichern
-  const fileName = `Expose_${ortCapitalized}_${propertyData.objekttyp || 'Immobilie'}_${new Date().toISOString().split('T')[0]}.pdf`;
-  doc.save(fileName);
-
-  showToast('PDF erfolgreich erstellt!', 'success');
-};
+    showToast('PDF erfolgreich erstellt!', 'success');
+  };
 
   const handleExportEmail = () => {
     const textToUse = isTextEdited ? editableText : aiGeneratedText;
@@ -1076,83 +1006,77 @@ const handleExportPDF = () => {
     }
   };
 
-
-  // STRIPE: Checkout Handler
-const handleStripeCheckout = async () => {
-  if (!STRIPE_ENABLED) {
-    handlePaymentSuccess();
-    return;
-  }
-
-  setIsProcessingPayment(true);
-
-  try {
-    // 🔥 NEU: DATEN VOR STRIPE-REDIRECT SPEICHERN!
-    const paymentData = {
-      propertyData,
-      uploadedPhotos: uploadedPhotos.map(p => ({
-        id: p.id,
-        name: p.name,
-        base64: p.base64,
-        label: p.label
-      })),
-      uploadedLogo: uploadedLogo ? {
-        id: uploadedLogo.id,
-        name: uploadedLogo.name,
-        base64: uploadedLogo.base64
-      } : null,
-      uploadedEnergyCert: uploadedEnergyCert ? {
-        id: uploadedEnergyCert.id,
-        name: uploadedEnergyCert.name,
-        base64: uploadedEnergyCert.base64
-      } : null,
-      aiGeneratedText,
-      editableText,
-      isTextEdited,
-      selectedTonality,
-      timestamp: new Date().toISOString()
-    };
-
-    localStorage.setItem('expose-profi-payment-pending', JSON.stringify(paymentData));
-    console.log('[PAYMENT] ✅ Daten gespeichert vor Stripe-Redirect');
-
-    const response = await fetch('/api/create-checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: propertyData.maklerEmail || undefined
-      })
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
-      throw new Error(data.message || 'Checkout konnte nicht erstellt werden');
+  const handleStripeCheckout = async () => {
+    if (!STRIPE_ENABLED) {
+      handlePaymentSuccess();
+      return;
     }
 
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
-      throw new Error('Keine Checkout-URL erhalten');
-    }
+    setIsProcessingPayment(true);
 
-  } catch (error) {
-    console.error('Stripe Checkout Error:', error);
-    showToast(error.message || 'Fehler beim Öffnen der Zahlungsseite', 'error');
-    setIsProcessingPayment(false);
-    localStorage.removeItem('expose-profi-payment-pending');
-  }
-};
+    try {
+      const paymentData = {
+        propertyData,
+        uploadedPhotos: uploadedPhotos.map(p => ({
+          id: p.id,
+          name: p.name,
+          base64: p.base64,
+          label: p.label
+        })),
+        uploadedLogo: uploadedLogo ? {
+          id: uploadedLogo.id,
+          name: uploadedLogo.name,
+          base64: uploadedLogo.base64
+        } : null,
+        uploadedEnergyCert: uploadedEnergyCert ? {
+          id: uploadedEnergyCert.id,
+          name: uploadedEnergyCert.name,
+          base64: uploadedEnergyCert.base64
+        } : null,
+        aiGeneratedText,
+        editableText,
+        isTextEdited,
+        selectedTonality,
+        timestamp: new Date().toISOString()
+      };
+
+      localStorage.setItem('expose-profi-payment-pending', JSON.stringify(paymentData));
+      console.log('[PAYMENT] ✅ Daten gespeichert vor Stripe-Redirect');
+
+      const response = await fetch('/api/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: propertyData.maklerEmail || undefined
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Checkout konnte nicht erstellt werden');
+      }
+
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('Keine Checkout-URL erhalten');
+      }
+
+    } catch (error) {
+      console.error('Stripe Checkout Error:', error);
+      showToast(error.message || 'Fehler beim Öffnen der Zahlungsseite', 'error');
+      setIsProcessingPayment(false);
+      localStorage.removeItem('expose-profi-payment-pending');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white">
-      {/* TOAST */}
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      {/* LIGHTBOX (NEU!) */}
       {lightboxPhoto && <Lightbox photo={lightboxPhoto} onClose={() => setLightboxPhoto(null)} />}
 
-      {/* RESTORE BANNER */}
       {showRestoreBanner && (
         <div className="fixed top-0 left-0 right-0 bg-gradient-to-r from-[#C5A059] to-[#B39050] text-white py-3 px-6 z-40 shadow-xl">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -1188,7 +1112,7 @@ const handleStripeCheckout = async () => {
           </div>
 
           <h1 className="text-7xl md:text-8xl font-bold mb-6 leading-tight">
-            Exposés in<br/>
+            Exposés in<br />
             <span className="bg-gradient-to-r from-[#C5A059] via-[#D4AF6A] to-[#C5A059] bg-clip-text text-transparent">Perfektion</span>
           </h1>
 
@@ -1296,12 +1220,10 @@ const handleStripeCheckout = async () => {
                 <label className="block text-sm font-semibold text-[#0A192F] mb-2">
                   Objekttyp <span className="text-red-500">*</span>
                 </label>
-                <select name="objekttyp" value={propertyData.objekttyp} 
+                <select name="objekttyp" value={propertyData.objekttyp}
                   onChange={handleInputChange}
                   onBlur={(e) => validateField('objekttyp', e.target.value)}
-                  className={`w-full px-4 py-3 rounded-xl border-2 ${
-                    errors.objekttyp ? 'border-red-500' : 'border-gray-200'
-                  } focus:border-[#C5A059] focus:ring-4 focus:ring-[#C5A059]/20 outline-none transition-all`}>
+                  className={`w-full px-4 py-3 rounded-xl border-2 ${errors.objekttyp ? 'border-red-500' : 'border-gray-200'} focus:border-[#C5A059] focus:ring-4 focus:ring-[#C5A059]/20 outline-none transition-all`}>
                   <option value="">Wählen</option>
                   {objekttypen.map((typ, i) => (
                     typ.startsWith('---') ? (
@@ -1311,9 +1233,7 @@ const handleStripeCheckout = async () => {
                     )
                   ))}
                 </select>
-                {errors.objekttyp && (
-                  <p className="text-red-500 text-xs mt-1">{errors.objekttyp}</p>
-                )}
+                {errors.objekttyp && <p className="text-red-500 text-xs mt-1">{errors.objekttyp}</p>}
               </div>
 
               <div>
@@ -1323,22 +1243,13 @@ const handleStripeCheckout = async () => {
                 <div className="grid grid-cols-2 gap-3">
                   {['Verkauf', 'Vermietung'].map(t => (
                     <button key={t} type="button"
-                      onClick={() => {
-                        setPropertyData(prev => ({ ...prev, vermarktungsart: t }));
-                        validateField('vermarktungsart', t);
-                      }}
-                      className={`px-4 py-3 rounded-xl font-semibold transition-all ${
-                        propertyData.vermarktungsart === t
-                          ? 'bg-gradient-to-r from-[#C5A059] to-[#B39050] text-white shadow-lg'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}>
+                      onClick={() => { setPropertyData(prev => ({ ...prev, vermarktungsart: t })); validateField('vermarktungsart', t); }}
+                      className={`px-4 py-3 rounded-xl font-semibold transition-all ${propertyData.vermarktungsart === t ? 'bg-gradient-to-r from-[#C5A059] to-[#B39050] text-white shadow-lg' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
                       {t}
                     </button>
                   ))}
                 </div>
-                {errors.vermarktungsart && (
-                  <p className="text-red-500 text-xs mt-1">{errors.vermarktungsart}</p>
-                )}
+                {errors.vermarktungsart && <p className="text-red-500 text-xs mt-1">{errors.vermarktungsart}</p>}
               </div>
 
               <div>
@@ -1393,12 +1304,8 @@ const handleStripeCheckout = async () => {
                   onChange={(e) => handleNumericInput(e, 'wohnflaeche')}
                   onBlur={(e) => validateField('wohnflaeche', e.target.value)}
                   placeholder="85"
-                  className={`w-full px-4 py-3 rounded-xl border-2 ${
-                    errors.wohnflaeche ? 'border-red-500' : 'border-gray-200'
-                  } focus:border-[#C5A059] focus:ring-4 focus:ring-[#C5A059]/20 outline-none transition-all`} />
-                {errors.wohnflaeche && (
-                  <p className="text-red-500 text-xs mt-1">{errors.wohnflaeche}</p>
-                )}
+                  className={`w-full px-4 py-3 rounded-xl border-2 ${errors.wohnflaeche ? 'border-red-500' : 'border-gray-200'} focus:border-[#C5A059] focus:ring-4 focus:ring-[#C5A059]/20 outline-none transition-all`} />
+                {errors.wohnflaeche && <p className="text-red-500 text-xs mt-1">{errors.wohnflaeche}</p>}
               </div>
 
               <div>
@@ -1425,12 +1332,8 @@ const handleStripeCheckout = async () => {
                   onChange={(e) => handleNumericInput(e, 'zimmer', true)}
                   onBlur={(e) => validateField('zimmer', e.target.value)}
                   placeholder="3"
-                  className={`w-full px-4 py-3 rounded-xl border-2 ${
-                    errors.zimmer ? 'border-red-500' : 'border-gray-200'
-                  } focus:border-[#C5A059] focus:ring-4 focus:ring-[#C5A059]/20 outline-none transition-all`} />
-                {errors.zimmer && (
-                  <p className="text-red-500 text-xs mt-1">{errors.zimmer}</p>
-                )}
+                  className={`w-full px-4 py-3 rounded-xl border-2 ${errors.zimmer ? 'border-red-500' : 'border-gray-200'} focus:border-[#C5A059] focus:ring-4 focus:ring-[#C5A059]/20 outline-none transition-all`} />
+                {errors.zimmer && <p className="text-red-500 text-xs mt-1">{errors.zimmer}</p>}
               </div>
 
               {[
@@ -1448,6 +1351,7 @@ const handleStripeCheckout = async () => {
               ))}
             </div>
           </div>
+
           {/* ZUSTAND */}
           <div className="bg-gradient-to-br from-gray-50 to-white rounded-3xl p-8 shadow-xl mb-8 border border-gray-100">
             <div className="flex items-center space-x-3 mb-6">
@@ -1504,11 +1408,7 @@ const handleStripeCheckout = async () => {
                   {['Neuwertig', 'Gepflegt', 'Renovierungsbedürftig'].map(z => (
                     <button key={z} type="button"
                       onClick={() => setPropertyData(prev => ({ ...prev, zustand: z }))}
-                      className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
-                        propertyData.zustand === z
-                          ? 'bg-gradient-to-r from-[#C5A059] to-[#B39050] text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}>
+                      className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all ${propertyData.zustand === z ? 'bg-gradient-to-r from-[#C5A059] to-[#B39050] text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
                       {z === 'Neuwertig' ? 'Neu' : z === 'Gepflegt' ? 'Gepfl.' : 'Renov.'}
                     </button>
                   ))}
@@ -1535,56 +1435,24 @@ const handleStripeCheckout = async () => {
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div>
-                <label className="block text-sm font-semibold text-[#0A192F] mb-2">Denkmalschutz</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {['Ja', 'Nein'].map(t => (
-                    <button key={t} type="button"
-                      onClick={() => setPropertyData(prev => ({ ...prev, denkmalschutz: t }))}
-                      className={`px-4 py-3 rounded-xl font-semibold transition-all ${
-                        propertyData.denkmalschutz === t
-                          ? 'bg-gradient-to-r from-[#C5A059] to-[#B39050] text-white shadow-lg'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}>
-                      {t}
-                    </button>
-                  ))}
+              {[
+                { label: 'Denkmalschutz', field: 'denkmalschutz' },
+                { label: 'Erbpacht', field: 'erbpacht' },
+                { label: 'Einliegerwohnung', field: 'einliegerwohnung' }
+              ].map(item => (
+                <div key={item.field}>
+                  <label className="block text-sm font-semibold text-[#0A192F] mb-2">{item.label}</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {['Ja', 'Nein'].map(t => (
+                      <button key={t} type="button"
+                        onClick={() => setPropertyData(prev => ({ ...prev, [item.field]: t }))}
+                        className={`px-4 py-3 rounded-xl font-semibold transition-all ${propertyData[item.field] === t ? 'bg-gradient-to-r from-[#C5A059] to-[#B39050] text-white shadow-lg' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-[#0A192F] mb-2">Erbpacht</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {['Ja', 'Nein'].map(t => (
-                    <button key={t} type="button"
-                      onClick={() => setPropertyData(prev => ({ ...prev, erbpacht: t }))}
-                      className={`px-4 py-3 rounded-xl font-semibold transition-all ${
-                        propertyData.erbpacht === t
-                          ? 'bg-gradient-to-r from-[#C5A059] to-[#B39050] text-white shadow-lg'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}>
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-[#0A192F] mb-2">Einliegerwohnung</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {['Ja', 'Nein'].map(t => (
-                    <button key={t} type="button"
-                      onClick={() => setPropertyData(prev => ({ ...prev, einliegerwohnung: t }))}
-                      className={`px-4 py-3 rounded-xl font-semibold transition-all ${
-                        propertyData.einliegerwohnung === t
-                          ? 'bg-gradient-to-r from-[#C5A059] to-[#B39050] text-white shadow-lg'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}>
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              ))}
 
               <div>
                 <label className="block text-sm font-semibold text-[#0A192F] mb-2">Hausgeld (€/Monat)</label>
@@ -1621,7 +1489,7 @@ const handleStripeCheckout = async () => {
             </div>
           </div>
 
-          {/* NEU: MAKLER-KONTAKTDATEN! 🔥 */}
+          {/* MAKLER-KONTAKTDATEN */}
           <div className="bg-gradient-to-br from-[#C5A059]/5 to-[#D4AF6A]/5 rounded-3xl p-8 shadow-xl mb-8 border-2 border-[#C5A059]/20">
             <div className="flex items-center space-x-3 mb-6">
               <div className="w-12 h-12 bg-gradient-to-br from-[#C5A059] to-[#B39050] rounded-xl flex items-center justify-center">
@@ -1635,59 +1503,41 @@ const handleStripeCheckout = async () => {
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
-                <label className="block text-sm font-semibold text-[#0A192F] mb-2">
-                  Ihr Name
-                </label>
+                <label className="block text-sm font-semibold text-[#0A192F] mb-2">Ihr Name</label>
                 <input type="text" name="maklerName" value={propertyData.maklerName} onChange={handleInputChange}
                   placeholder="Max Mustermann"
                   className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-[#C5A059] focus:ring-4 focus:ring-[#C5A059]/20 outline-none transition-all" />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-[#0A192F] mb-2">
-                  Firma / Immobilienbüro
-                </label>
+                <label className="block text-sm font-semibold text-[#0A192F] mb-2">Firma / Immobilienbüro</label>
                 <input type="text" name="maklerFirma" value={propertyData.maklerFirma} onChange={handleInputChange}
                   placeholder="Immobilien Mustermann GmbH"
                   className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-[#C5A059] focus:ring-4 focus:ring-[#C5A059]/20 outline-none transition-all" />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-[#0A192F] mb-2">
-                  Telefon
-                </label>
-                <input type="tel" name="maklerTelefon" value={propertyData.maklerTelefon} 
+                <label className="block text-sm font-semibold text-[#0A192F] mb-2">Telefon</label>
+                <input type="tel" name="maklerTelefon" value={propertyData.maklerTelefon}
                   onChange={handleInputChange}
                   onBlur={(e) => validateField('maklerTelefon', e.target.value)}
                   placeholder="+49 123 456789"
-                  className={`w-full px-4 py-3 rounded-xl border-2 ${
-                    errors.maklerTelefon ? 'border-red-500' : 'border-gray-200'
-                  } focus:border-[#C5A059] focus:ring-4 focus:ring-[#C5A059]/20 outline-none transition-all`} />
-                {errors.maklerTelefon && (
-                  <p className="text-red-500 text-xs mt-1">{errors.maklerTelefon}</p>
-                )}
+                  className={`w-full px-4 py-3 rounded-xl border-2 ${errors.maklerTelefon ? 'border-red-500' : 'border-gray-200'} focus:border-[#C5A059] focus:ring-4 focus:ring-[#C5A059]/20 outline-none transition-all`} />
+                {errors.maklerTelefon && <p className="text-red-500 text-xs mt-1">{errors.maklerTelefon}</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-[#0A192F] mb-2">
-                  E-Mail
-                </label>
-                <input type="email" name="maklerEmail" value={propertyData.maklerEmail} 
+                <label className="block text-sm font-semibold text-[#0A192F] mb-2">E-Mail</label>
+                <input type="email" name="maklerEmail" value={propertyData.maklerEmail}
                   onChange={handleInputChange}
                   onBlur={(e) => validateField('maklerEmail', e.target.value)}
                   placeholder="kontakt@immobilien-mustermann.de"
-                  className={`w-full px-4 py-3 rounded-xl border-2 ${
-                    errors.maklerEmail ? 'border-red-500' : 'border-gray-200'
-                  } focus:border-[#C5A059] focus:ring-4 focus:ring-[#C5A059]/20 outline-none transition-all`} />
-                {errors.maklerEmail && (
-                  <p className="text-red-500 text-xs mt-1">{errors.maklerEmail}</p>
-                )}
+                  className={`w-full px-4 py-3 rounded-xl border-2 ${errors.maklerEmail ? 'border-red-500' : 'border-gray-200'} focus:border-[#C5A059] focus:ring-4 focus:ring-[#C5A059]/20 outline-none transition-all`} />
+                {errors.maklerEmail && <p className="text-red-500 text-xs mt-1">{errors.maklerEmail}</p>}
               </div>
 
               <div className="lg:col-span-2">
-                <label className="block text-sm font-semibold text-[#0A192F] mb-2">
-                  Website
-                </label>
+                <label className="block text-sm font-semibold text-[#0A192F] mb-2">Website</label>
                 <input type="url" name="maklerWebsite" value={propertyData.maklerWebsite} onChange={handleInputChange}
                   placeholder="www.immobilien-mustermann.de"
                   className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-[#C5A059] focus:ring-4 focus:ring-[#C5A059]/20 outline-none transition-all" />
@@ -1698,11 +1548,12 @@ const handleStripeCheckout = async () => {
               <div className="flex items-start space-x-3">
                 <Info className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-blue-700">
-                  <strong>Tipp:</strong> Diese Daten erscheinen in der goldenen Kontakt-Box auf der letzten PDF-Seite. So können Interessenten Sie direkt erreichen!
+                  <strong>Tipp:</strong> Diese Daten erscheinen in der goldenen Kontakt-Box auf der letzten PDF-Seite.
                 </p>
               </div>
             </div>
           </div>
+
           {/* AUSSTATTUNG */}
           <div className="bg-gradient-to-br from-gray-50 to-white rounded-3xl p-8 shadow-xl mb-8 border border-gray-100">
             <div className="flex items-center space-x-3 mb-6">
@@ -1716,8 +1567,8 @@ const handleStripeCheckout = async () => {
               <div key={cat} className="mb-6 last:mb-0">
                 <h4 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">
                   {cat === 'aussenbereich' ? 'Außenbereich' :
-                   cat === 'innenraum' ? 'Innenraum' :
-                   cat === 'parkenKeller' ? 'Parken & Keller' : 'Technik & Komfort'}
+                    cat === 'innenraum' ? 'Innenraum' :
+                      cat === 'parkenKeller' ? 'Parken & Keller' : 'Technik & Komfort'}
                 </h4>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                   {feats.map(f => (
@@ -1744,7 +1595,6 @@ const handleStripeCheckout = async () => {
             </div>
 
             <div className="space-y-8">
-              {/* Logo */}
               <div>
                 <label className="block text-sm font-semibold text-[#0A192F] mb-3">Logo</label>
                 <input ref={logoInputRef} type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
@@ -1764,7 +1614,6 @@ const handleStripeCheckout = async () => {
                 </button>
               </div>
 
-              {/* Fotos mit LIGHTBOX! */}
               <div>
                 <label className="block text-sm font-semibold text-[#0A192F] mb-3">
                   Objektfotos (mit Beschriftung)
@@ -1775,9 +1624,7 @@ const handleStripeCheckout = async () => {
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                   onClick={() => photoInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-2xl p-8 cursor-pointer transition-all ${
-                    isDragging ? 'border-[#C5A059] bg-[#C5A059]/5' : 'border-gray-300 hover:border-[#C5A059] bg-white'
-                  }`}>
+                  className={`border-2 border-dashed rounded-2xl p-8 cursor-pointer transition-all ${isDragging ? 'border-[#C5A059] bg-[#C5A059]/5' : 'border-gray-300 hover:border-[#C5A059] bg-white'}`}>
                   <div className="text-center text-gray-500">
                     <Upload className="w-12 h-12 mx-auto mb-3" />
                     <span className="text-sm font-medium block mb-1">Drag & Drop oder Klicken</span>
@@ -1789,11 +1636,10 @@ const handleStripeCheckout = async () => {
                   <div className="mt-6 space-y-4">
                     {uploadedPhotos.map(p => (
                       <div key={p.id} className="group relative flex items-start space-x-4 bg-white p-4 rounded-xl border border-gray-200 hover:border-[#C5A059] transition-all">
-                        {/* NEU: Klickbares Thumbnail mit Lightbox! */}
                         <div className="relative">
-                          <img 
-                            src={p.preview} 
-                            alt={p.name} 
+                          <img
+                            src={p.preview}
+                            alt={p.name}
                             className="w-24 h-24 object-cover rounded-lg cursor-pointer hover:opacity-75 transition-opacity"
                             onClick={() => setLightboxPhoto(p)} />
                           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
@@ -1802,7 +1648,6 @@ const handleStripeCheckout = async () => {
                             </div>
                           </div>
                         </div>
-                        
                         <div className="flex-1">
                           <p className="text-sm font-medium text-gray-700 mb-2">{p.name}</p>
                           <input type="text" value={p.label}
@@ -1823,17 +1668,14 @@ const handleStripeCheckout = async () => {
                 )}
               </div>
 
-              {/* Energieausweis */}
               <div>
                 <label className="block text-sm font-semibold text-[#0A192F] mb-3">Energieausweis (OCR)</label>
                 <input ref={energyInputRef} type="file" accept="image/*,application/pdf" onChange={handleEnergyUpload} className="hidden" />
                 <button onClick={() => energyInputRef.current?.click()}
                   disabled={energyUploadStatus === 'uploading' || energyUploadStatus === 'extracting'}
-                  className={`w-full px-6 py-4 rounded-xl text-sm font-semibold transition-all ${
-                    energyUploadStatus === 'complete' ? 'bg-emerald-50 border-2 border-emerald-500 text-emerald-700' :
+                  className={`w-full px-6 py-4 rounded-xl text-sm font-semibold transition-all ${energyUploadStatus === 'complete' ? 'bg-emerald-50 border-2 border-emerald-500 text-emerald-700' :
                     energyUploadStatus === 'error' ? 'bg-red-50 border-2 border-red-500 text-red-700' :
-                    'bg-gray-50 border-2 border-dashed border-gray-300 text-gray-700 hover:border-[#C5A059]'
-                  }`}>
+                      'bg-gray-50 border-2 border-dashed border-gray-300 text-gray-700 hover:border-[#C5A059]'}`}>
                   {energyUploadStatus === 'idle' && (<><Upload className="w-5 h-5 inline mr-2" />Energieausweis hochladen</>)}
                   {energyUploadStatus === 'uploading' && (<><Loader2 className="w-5 h-5 inline mr-2 animate-spin" />Hochladen...</>)}
                   {energyUploadStatus === 'extracting' && (<><Loader2 className="w-5 h-5 inline mr-2 animate-spin" />KI extrahiert...</>)}
@@ -1882,11 +1724,9 @@ const handleStripeCheckout = async () => {
               ].map(tone => (
                 <button key={tone.value} type="button"
                   onClick={() => setSelectedTonality(tone.value)}
-                  className={`p-6 rounded-2xl text-left transition-all ${
-                    selectedTonality === tone.value
-                      ? 'bg-gradient-to-br from-[#C5A059] to-[#B39050] text-white shadow-2xl scale-105'
-                      : 'bg-white text-gray-700 hover:bg-gray-50 shadow-lg'
-                  }`}>
+                  className={`p-6 rounded-2xl text-left transition-all ${selectedTonality === tone.value
+                    ? 'bg-gradient-to-br from-[#C5A059] to-[#B39050] text-white shadow-2xl scale-105'
+                    : 'bg-white text-gray-700 hover:bg-gray-50 shadow-lg'}`}>
                   <div className="text-3xl mb-3">{tone.icon}</div>
                   <h4 className="font-bold text-lg mb-2">{tone.label}</h4>
                   <p className={`text-sm ${selectedTonality === tone.value ? 'text-white/80' : 'text-gray-600'}`}>
@@ -1900,11 +1740,9 @@ const handleStripeCheckout = async () => {
           {/* GENERATE BUTTON */}
           <button onClick={() => handleGenerate(selectedTonality)}
             disabled={!isFormValid() || isGenerating}
-            className={`w-full py-6 rounded-2xl text-xl font-bold transition-all shadow-2xl ${
-              isFormValid() && !isGenerating
-                ? 'bg-gradient-to-r from-[#C5A059] to-[#B39050] hover:from-[#D4AF6A] hover:to-[#C5A059] text-white transform hover:scale-105'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}>
+            className={`w-full py-6 rounded-2xl text-xl font-bold transition-all shadow-2xl ${isFormValid() && !isGenerating
+              ? 'bg-gradient-to-r from-[#C5A059] to-[#B39050] hover:from-[#D4AF6A] hover:to-[#C5A059] text-white transform hover:scale-105'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>
             {isGenerating ? (
               <span className="flex items-center justify-center space-x-3">
                 <Loader2 className="w-6 h-6 animate-spin" />
@@ -1929,7 +1767,8 @@ const handleStripeCheckout = async () => {
               </p>
             </div>
           )}
-          {/* RESULT MIT TEXT-EDITOR */}
+
+          {/* RESULT */}
           {(aiGeneratedText || editableText) && (
             <div className="mt-12 bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden">
               <div className="bg-gradient-to-r from-[#0A192F] to-[#112240] px-8 py-6 flex items-center justify-between flex-wrap gap-4">
@@ -1937,9 +1776,7 @@ const handleStripeCheckout = async () => {
                   <Eye className="w-6 h-6 text-[#C5A059]" />
                   <h3 className="text-2xl font-bold text-white">Ihr Exposé</h3>
                   {isTextEdited && (
-                    <span className="px-3 py-1 bg-amber-500 text-white text-xs font-bold rounded-full">
-                      Bearbeitet
-                    </span>
+                    <span className="px-3 py-1 bg-amber-500 text-white text-xs font-bold rounded-full">Bearbeitet</span>
                   )}
                 </div>
                 {isUnlocked && (
@@ -1972,11 +1809,8 @@ const handleStripeCheckout = async () => {
                       <p className="text-sm text-gray-600">
                         Bearbeiten Sie den Text direkt. Änderungen werden automatisch im PDF übernommen.
                       </p>
-                      <div className="text-xs text-gray-500">
-                        {editableText.length} Zeichen
-                      </div>
+                      <div className="text-xs text-gray-500">{editableText.length} Zeichen</div>
                     </div>
-                    
                     <textarea
                       value={editableText}
                       onChange={(e) => handleTextEdit(e.target.value)}
@@ -2040,15 +1874,7 @@ const handleStripeCheckout = async () => {
                 price: '29€',
                 per: 'pro Exposé',
                 desc: 'Perfekt für gelegentliche Nutzung',
-                features: [
-                  'Vision-KI Analyse', 
-                  '3 Tonalitäten (Pro/Emotional/Luxus)',
-                  'Text-Editor mit Live-Bearbeitung',
-                  'Foto-Beschriftungen', 
-                  'OCR Energieausweis', 
-                  'PDF-Export', 
-                  'E-Mail-Export'
-                ],
+                features: ['Vision-KI Analyse', '3 Tonalitäten (Pro/Emotional/Luxus)', 'Text-Editor mit Live-Bearbeitung', 'Foto-Beschriftungen', 'OCR Energieausweis', 'PDF-Export', 'E-Mail-Export'],
                 cta: 'Jetzt starten',
                 highlight: false
               },
@@ -2057,22 +1883,12 @@ const handleStripeCheckout = async () => {
                 price: '79€',
                 per: 'pro Monat',
                 desc: 'Für professionelle Makler',
-                features: [
-                  'Alles aus Starter', 
-                  '10 Exposés inkl.', 
-                  'Eigenes Branding', 
-                  'Prioritäts-Support', 
-                  'Beta-Features',
-                  'Exposé-Verlauf & Speicherung',
-                  'Bulk-Export (bald)'
-                ],
+                features: ['Alles aus Starter', '10 Exposés inkl.', 'Eigenes Branding', 'Prioritäts-Support', 'Beta-Features', 'Exposé-Verlauf & Speicherung', 'Bulk-Export (bald)'],
                 cta: 'Pro werden',
                 highlight: true
               }
             ].map((plan, i) => (
-              <div key={i} className={`relative bg-white rounded-3xl p-8 shadow-xl transition-all hover:shadow-2xl ${
-                plan.highlight ? 'ring-4 ring-[#C5A059] transform scale-105' : ''
-              }`}>
+              <div key={i} className={`relative bg-white rounded-3xl p-8 shadow-xl transition-all hover:shadow-2xl ${plan.highlight ? 'ring-4 ring-[#C5A059] transform scale-105' : ''}`}>
                 {plan.highlight && (
                   <div className="absolute -top-5 left-1/2 -translate-x-1/2">
                     <div className="bg-gradient-to-r from-[#C5A059] to-[#B39050] text-white px-6 py-2 rounded-full text-sm font-bold flex items-center space-x-1">
@@ -2081,7 +1897,6 @@ const handleStripeCheckout = async () => {
                     </div>
                   </div>
                 )}
-
                 <div className="text-center mb-8">
                   <h3 className="text-2xl font-bold text-[#0A192F] mb-2">{plan.name}</h3>
                   <p className="text-gray-600 text-sm mb-6">{plan.desc}</p>
@@ -2090,7 +1905,6 @@ const handleStripeCheckout = async () => {
                   </div>
                   <p className="text-gray-500 text-sm">{plan.per}</p>
                 </div>
-
                 <div className="space-y-4 mb-8">
                   {plan.features.map((feat, j) => (
                     <div key={j} className="flex items-center space-x-3">
@@ -2099,13 +1913,7 @@ const handleStripeCheckout = async () => {
                     </div>
                   ))}
                 </div>
-
-                <button
-                  className={`w-full py-4 rounded-2xl font-bold transition-all ${
-                    plan.highlight
-                      ? 'bg-gradient-to-r from-[#C5A059] to-[#B39050] hover:from-[#D4AF6A] hover:to-[#C5A059] text-white shadow-lg transform hover:scale-105'
-                      : 'bg-gray-100 hover:bg-gray-200 text-[#0A192F]'
-                  }`}>
+                <button className={`w-full py-4 rounded-2xl font-bold transition-all ${plan.highlight ? 'bg-gradient-to-r from-[#C5A059] to-[#B39050] hover:from-[#D4AF6A] hover:to-[#C5A059] text-white shadow-lg transform hover:scale-105' : 'bg-gray-100 hover:bg-gray-200 text-[#0A192F]'}`}>
                   {plan.cta}
                 </button>
               </div>
@@ -2119,13 +1927,11 @@ const handleStripeCheckout = async () => {
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-10 right-10 w-96 h-96 bg-[#C5A059] rounded-full blur-3xl"></div>
         </div>
-
         <div className="relative z-10 max-w-4xl mx-auto px-6 text-center">
           <h2 className="text-5xl font-bold mb-6">Werde Beta-Tester</h2>
           <p className="text-xl text-gray-300 mb-12 leading-relaxed">
             Erhalte exklusiven Zugang zu neuen Features und gestalte die Zukunft von Exposé-Profi mit.
           </p>
-
           {betaSubmitted ? (
             <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20">
               <Check className="w-16 h-16 text-[#C5A059] mx-auto mb-4" />
@@ -2164,7 +1970,6 @@ const handleStripeCheckout = async () => {
                 Vision-KI für professionelle Immobilien-Exposés.
               </p>
             </div>
-
             <div>
               <h4 className="font-bold mb-4">Produkt</h4>
               <ul className="space-y-2 text-sm text-gray-400">
@@ -2172,7 +1977,6 @@ const handleStripeCheckout = async () => {
                 <li><a href="#" className="hover:text-[#C5A059] transition-colors">Preise</a></li>
               </ul>
             </div>
-
             <div>
               <h4 className="font-bold mb-4">Rechtliches</h4>
               <ul className="space-y-2 text-sm text-gray-400">
@@ -2181,7 +1985,6 @@ const handleStripeCheckout = async () => {
                 <li><a href="#agb" className="hover:text-[#C5A059] transition-colors">AGB</a></li>
               </ul>
             </div>
-
             <div>
               <h4 className="font-bold mb-4">Kontakt</h4>
               <p className="text-sm text-gray-400 mb-2">Bastian Marget</p>
@@ -2190,7 +1993,6 @@ const handleStripeCheckout = async () => {
               <p className="text-sm text-[#C5A059] mt-4">info@expose-profi.de</p>
             </div>
           </div>
-
           <div className="border-t border-white/10 pt-8">
             <p className="text-center text-sm text-gray-500">
               © 2026 Exposé-Profi. Alle Rechte vorbehalten.
@@ -2199,104 +2001,69 @@ const handleStripeCheckout = async () => {
         </div>
       </footer>
 
-     {/* PAYMENT MODAL */}
-{showPaymentModal && (
-  <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={closePayment}>
-    <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 relative" onClick={(e) => e.stopPropagation()}>
-      <button onClick={closePayment} className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
-        <X className="w-5 h-5 text-gray-600" />
-      </button>
-
-      <div className="text-center mb-8">
-        <div className="w-20 h-20 bg-gradient-to-br from-[#C5A059] to-[#B39050] rounded-full flex items-center justify-center mx-auto mb-6">
-          <CreditCard className="w-10 h-10 text-white" />
-        </div>
-        <h3 className="text-3xl font-bold text-[#0A192F] mb-3">Premium freischalten</h3>
-        <div className="bg-[#C5A059]/10 border border-[#C5A059]/30 rounded-2xl p-6 mb-6">
-          <div className="text-5xl font-bold text-[#0A192F] mb-2">29€</div>
-          <div className="text-sm text-gray-600">einmalig pro Exposé</div>
-        </div>
-      </div>
-
-      <div className="space-y-4 mb-8">
-        {[
-          'Vollständiger Premium-Text',
-          'Text-Editor mit Live-Bearbeitung',
-          'PDF-Export mit Branding',
-          'E-Mail-Versand',
-          '3 Tonalitäten wählbar'
-        ].map((f, i) => (
-          <div key={i} className="flex items-center space-x-3">
-            <CheckCircle className="w-5 h-5 text-[#C5A059] flex-shrink-0" />
-            <span className="text-gray-700">{f}</span>
+      {/* PAYMENT MODAL */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={closePayment}>
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 relative" onClick={(e) => e.stopPropagation()}>
+            <button onClick={closePayment} className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
+              <X className="w-5 h-5 text-gray-600" />
+            </button>
+            <div className="text-center mb-8">
+              <div className="w-20 h-20 bg-gradient-to-br from-[#C5A059] to-[#B39050] rounded-full flex items-center justify-center mx-auto mb-6">
+                <CreditCard className="w-10 h-10 text-white" />
+              </div>
+              <h3 className="text-3xl font-bold text-[#0A192F] mb-3">Premium freischalten</h3>
+              <div className="bg-[#C5A059]/10 border border-[#C5A059]/30 rounded-2xl p-6 mb-6">
+                <div className="text-5xl font-bold text-[#0A192F] mb-2">29€</div>
+                <div className="text-sm text-gray-600">einmalig pro Exposé</div>
+              </div>
+            </div>
+            <div className="space-y-4 mb-8">
+              {['Vollständiger Premium-Text', 'Text-Editor mit Live-Bearbeitung', 'PDF-Export mit Branding', 'E-Mail-Versand', '3 Tonalitäten wählbar'].map((f, i) => (
+                <div key={i} className="flex items-center space-x-3">
+                  <CheckCircle className="w-5 h-5 text-[#C5A059] flex-shrink-0" />
+                  <span className="text-gray-700">{f}</span>
+                </div>
+              ))}
+            </div>
+            {STRIPE_ENABLED ? (
+              <button
+                onClick={handleStripeCheckout}
+                disabled={isProcessingPayment}
+                className={`w-full py-5 rounded-2xl text-lg font-bold transition-all shadow-xl flex items-center justify-center space-x-2 ${isProcessingPayment ? 'bg-gray-300 cursor-not-allowed' : 'bg-gradient-to-r from-[#C5A059] to-[#B39050] hover:from-[#D4AF6A] hover:to-[#C5A059] text-white transform hover:scale-105'}`}>
+                {isProcessingPayment ? (
+                  <><Loader2 className="w-6 h-6 animate-spin" /><span>Öffne Zahlungsseite...</span></>
+                ) : (
+                  <><CreditCard className="w-6 h-6" /><span>Jetzt sicher bezahlen</span></>
+                )}
+              </button>
+            ) : (
+              <button onClick={handlePaymentSuccess}
+                className="w-full bg-gradient-to-r from-[#C5A059] to-[#B39050] hover:from-[#D4AF6A] hover:to-[#C5A059] text-white py-5 rounded-2xl text-lg font-bold transition-all transform hover:scale-105 shadow-xl flex items-center justify-center space-x-2">
+                <CreditCard className="w-6 h-6" />
+                <span>Jetzt freischalten (Demo)</span>
+              </button>
+            )}
+            <div className="mt-6 flex items-center justify-center space-x-4 text-xs text-gray-500">
+              <div className="flex items-center space-x-1">
+                <Shield className="w-4 h-4" />
+                <span>SSL verschlüsselt</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <CreditCard className="w-4 h-4" />
+                <span>Powered by Stripe</span>
+              </div>
+            </div>
           </div>
-        ))}
-      </div>
-
-      {STRIPE_ENABLED ? (
-        <button 
-          onClick={handleStripeCheckout}
-          disabled={isProcessingPayment}
-          className={`w-full py-5 rounded-2xl text-lg font-bold transition-all shadow-xl flex items-center justify-center space-x-2 ${
-            isProcessingPayment 
-              ? 'bg-gray-300 cursor-not-allowed' 
-              : 'bg-gradient-to-r from-[#C5A059] to-[#B39050] hover:from-[#D4AF6A] hover:to-[#C5A059] text-white transform hover:scale-105'
-          }`}>
-          {isProcessingPayment ? (
-            <>
-              <Loader2 className="w-6 h-6 animate-spin" />
-              <span>Öffne Zahlungsseite...</span>
-            </>
-          ) : (
-            <>
-              <CreditCard className="w-6 h-6" />
-              <span>Jetzt sicher bezahlen</span>
-            </>
-          )}
-        </button>
-      ) : (
-        <button onClick={handlePaymentSuccess}
-          className="w-full bg-gradient-to-r from-[#C5A059] to-[#B39050] hover:from-[#D4AF6A] hover:to-[#C5A059] text-white py-5 rounded-2xl text-lg font-bold transition-all transform hover:scale-105 shadow-xl flex items-center justify-center space-x-2">
-          <CreditCard className="w-6 h-6" />
-          <span>Jetzt freischalten (Demo)</span>
-        </button>
+        </div>
       )}
 
-      <div className="mt-6 flex items-center justify-center space-x-4 text-xs text-gray-500">
-        <div className="flex items-center space-x-1">
-          <Shield className="w-4 h-4" />
-          <span>SSL verschlüsselt</span>
-        </div>
-        <div className="flex items-center space-x-1">
-          <CreditCard className="w-4 h-4" />
-          <span>Powered by Stripe</span>
-        </div>
-      </div>
-
-      {!STRIPE_ENABLED && (
-        <p className="text-xs text-gray-500 text-center mt-4">
-          Demo-Modus: Klick simuliert erfolgreiche Zahlung
-        </p>
-      )}
-    </div>
-  </div>
-)}
-
-      {/* CSS */}
       <style>{`
         @keyframes slide-in {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
         }
-        .animate-slide-in {
-          animation: slide-in 0.3s ease-out;
-        }
+        .animate-slide-in { animation: slide-in 0.3s ease-out; }
       `}</style>
     </div>
   );
