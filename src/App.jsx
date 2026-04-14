@@ -409,7 +409,7 @@ useEffect(() => {
         });
       }
       setUploadedPhotos(prev => [...prev, ...newPhotos]);
-      showToast(`${newPhotos.length} Foto(s) hochgeladen`, 'success');
+showToast(`${newPhotos.length} Foto(s) hochgeladen`, 'success');
     } catch (e) {
       showToast('Fehler beim Verarbeiten der Fotos', 'error');
     }
