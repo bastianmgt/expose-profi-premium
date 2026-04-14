@@ -5,7 +5,7 @@ import {
   Flame, Car, Image as ImageIcon, CreditCard, Lock, Unlock,
   ChevronDown, CheckCircle, Star, Scale, Building, RotateCcw,
   AlertCircle, CheckCircle2, XCircle, Info, User, Phone, Globe,
-  Maximize2
+  Maximize2, ChevronUp, FileText, Award, HelpCircle
 } from 'lucide-react';
 
 function Toast({ message, type = 'info', onClose }) {
@@ -68,6 +68,20 @@ function Lightbox({ photo, onClose }) {
           {photo.label}
         </div>
       )}
+    </div>
+  );
+}
+
+
+function FaqItem({ question, answer }) {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <div className="border-b border-gray-200 last:border-0">
+      <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between py-5 text-left group">
+        <span className="font-semibold text-[#0A192F] group-hover:text-[#C5A059] transition-colors pr-4">{question}</span>
+        {open ? <ChevronUp className="w-5 h-5 text-[#C5A059] flex-shrink-0" /> : <ChevronDown className="w-5 h-5 text-gray-400 flex-shrink-0" />}
+      </button>
+      {open && <div className="pb-5 text-gray-600 leading-relaxed text-sm">{answer}</div>}
     </div>
   );
 }
@@ -200,6 +214,7 @@ export default function ExposeProfiUltimateFinal() {
 
   useEffect(() => {
     const handleBeforeUnload = (e) => {
+      if (window._stripeRedirect) return;
       const hasData = Object.keys(propertyData).some(k =>
         Array.isArray(propertyData[k]) ? propertyData[k].length > 0 : propertyData[k]
       );
@@ -605,7 +620,8 @@ export default function ExposeProfiUltimateFinal() {
       .replace(/\$m²\$/g, 'm²')
       .replace(/m\^2/g, 'm²')
       .replace(/\bm2\b/g, 'm²')
-      .replace(/\bqm\b/gi, 'm²');
+      .replace(/\bqm\b/gi, 'm²')
+      .replace(/[•·▪▸▷◦‣⁃]/g, '-');
   };
 
   const handleExportPDF = () => {
@@ -682,10 +698,7 @@ export default function ExposeProfiUltimateFinal() {
     const einleitungText = sections.einleitung || '';
     const einleitungLines = doc.splitTextToSize(einleitungText, pageWidth - 2 * margin - 20);
     einleitungLines.forEach(line => {
-      if (yPos > pageHeight - 30) {
-        doc.addPage();
-        yPos = margin;
-      }
+      if (yPos > pageHeight - 65) return;
       doc.text(line, pageWidth / 2, yPos, { align: 'center' });
       yPos += 7;
     });
@@ -882,9 +895,11 @@ export default function ExposeProfiUltimateFinal() {
       yPos += 10;
 
       const extraPhotos = uploadedPhotos.slice(1, 5);
-      const gap = 8;
+      const gap = 5;
       const photoWidth = (pageWidth - 2 * margin - gap) / 2;
-      const photoHeight = 55;
+      const nRows = Math.ceil(extraPhotos.length / 2);
+      const avail = pageHeight - yPos - 82 - (nRows - 1) * gap;
+      const photoHeight = Math.max(28, Math.min(50, Math.floor(avail / nRows)));
 
       extraPhotos.forEach((photo, i) => {
         const col = i % 2;
@@ -902,15 +917,11 @@ export default function ExposeProfiUltimateFinal() {
         }
       });
 
-      yPos += Math.ceil(extraPhotos.length / 2) * (photoHeight + gap) + 10;
+      yPos += nRows * (photoHeight + gap) + 5;
     }
 
-    if (yPos > pageHeight - 75) {
-      doc.addPage();
-      yPos = margin + 30;
-    }
-
-    yPos = Math.max(yPos, pageHeight - 75);
+    // Kontaktbox immer auf Seite 3
+    yPos = Math.min(yPos + 5, pageHeight - 78);
 
     doc.setFillColor(gold.r, gold.g, gold.b);
     doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 65, 2, 2, 'F');
@@ -1058,6 +1069,7 @@ export default function ExposeProfiUltimateFinal() {
       }
 
       if (data.url) {
+        window._stripeRedirect = true;
         window.location.href = data.url;
       } else {
         throw new Error('Keine Checkout-URL erhalten');
@@ -1116,8 +1128,11 @@ export default function ExposeProfiUltimateFinal() {
             <span className="bg-gradient-to-r from-[#C5A059] via-[#D4AF6A] to-[#C5A059] bg-clip-text text-transparent">Perfektion</span>
           </h1>
 
-          <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-3xl mx-auto leading-relaxed">
-            Immobilien-Exposés, die verkaufen. Erstellt von Vision-KI, die Architektur versteht.
+          <p className="text-xl md:text-2xl text-gray-300 mb-4 max-w-3xl mx-auto leading-relaxed">
+            Professionelle Immobilien-Exposés in unter 30 Sekunden. KI, die Fotos wirklich analysiert.
+          </p>
+          <p className="text-base text-[#C5A059] font-semibold mb-10">
+            ✓ 3-seitiges PDF &nbsp;·&nbsp; ✓ Druckfertig &nbsp;·&nbsp; ✓ 14 Tage Geld-zurück-Garantie
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6">
@@ -1125,19 +1140,24 @@ export default function ExposeProfiUltimateFinal() {
               className="group px-10 py-5 bg-gradient-to-r from-[#C5A059] to-[#B39050] hover:from-[#D4AF6A] hover:to-[#C5A059] text-white rounded-2xl text-lg font-bold transition-all transform hover:scale-105 shadow-2xl">
               <span className="flex items-center space-x-2">
                 <Sparkles className="w-6 h-6" />
-                <span>Jetzt erstellen</span>
+                <span>Jetzt kostenlos testen</span>
               </span>
             </button>
+            <a href="mailto:info@expose-profi.de?subject=Demo-Exposé"
+              className="px-8 py-5 bg-white/10 hover:bg-white/20 backdrop-blur-lg border border-white/20 rounded-2xl text-white font-semibold transition-all flex items-center space-x-2">
+              <FileText className="w-5 h-5" />
+              <span>Beispiel-Exposé anfordern</span>
+            </a>
           </div>
 
-          <div className="mt-16 grid grid-cols-3 gap-8 max-w-3xl mx-auto">
+          <div className="mt-14 grid grid-cols-3 gap-8 max-w-2xl mx-auto">
             {[
               { num: '<30s', text: 'Generierung' },
-              { num: '10.000+', text: 'Exposés erstellt' },
-              { num: '98%', text: 'Zufriedenheit' }
+              { num: '29€', text: 'einmalig, kein Abo' },
+              { num: '14 Tage', text: 'Geld-zurück' }
             ].map((stat, i) => (
               <div key={i} className="text-center">
-                <div className="text-4xl font-bold text-[#C5A059] mb-2">{stat.num}</div>
+                <div className="text-3xl md:text-4xl font-bold text-[#C5A059] mb-1">{stat.num}</div>
                 <div className="text-sm text-gray-400">{stat.text}</div>
               </div>
             ))}
@@ -1857,6 +1877,33 @@ export default function ExposeProfiUltimateFinal() {
         </div>
       </section>
 
+
+      {/* FAQ */}
+      <section className="py-28 bg-gray-50">
+        <div className="max-w-3xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-[#0A192F] mb-4">Häufige Fragen</h2>
+            <p className="text-gray-600">Alles was Sie wissen müssen</p>
+          </div>
+          <div className="bg-white rounded-3xl shadow-xl p-8">
+            {[
+              { q: 'Was bekomme ich für 29€?', a: '3-seitiges druckfertiges PDF: Cover mit Hero-Foto, Objektdaten-Seite und Lage/Kontakt-Seite mit goldener Kontaktbox. Dazu vollständiger Text-Editor und E-Mail-Export.' },
+              { q: 'Wie lange dauert die Generierung?', a: 'In der Regel 20–40 Sekunden. Die KI analysiert dabei Ihre hochgeladenen Fotos und erstellt einen maßgeschneiderten Text.' },
+              { q: 'Was passiert nach der Zahlung?', a: 'Sie werden direkt zurückgeleitet. Alle Daten und Fotos werden automatisch wiederhergestellt – kein erneutes Ausfüllen nötig.' },
+              { q: 'Kann ich den Text noch bearbeiten?', a: 'Ja! Nach dem Freischalten steht ein vollständiger Text-Editor zur Verfügung. Alle Änderungen fließen automatisch ins PDF.' },
+              { q: 'Gibt es eine Geld-zurück-Garantie?', a: 'Ja, 14 Tage ohne Wenn und Aber. Schreiben Sie uns an info@expose-profi.de und wir erstatten den vollen Betrag.' },
+              { q: 'Welche Zahlungsmethoden gibt es?', a: 'Kreditkarte (Visa, Mastercard, Amex), SEPA-Lastschrift, Apple Pay und Google Pay – alles über Stripe, SSL-verschlüsselt.' },
+              { q: 'Wird mein Logo im PDF angezeigt?', a: 'Ja, auf allen drei Seiten oben links – ideal für Makler mit eigenem Branding.' }
+            ].map((item, i) => (
+              <FaqItem key={i} question={item.q} answer={item.a} />
+            ))}
+          </div>
+          <p className="text-center text-gray-500 mt-6 text-sm">
+            Weitere Fragen? <a href="mailto:info@expose-profi.de" className="text-[#C5A059] font-semibold hover:underline">info@expose-profi.de</a>
+          </p>
+        </div>
+      </section>
+
       {/* PRICING */}
       <section className="py-32 bg-gradient-to-br from-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-6">
@@ -1918,6 +1965,17 @@ export default function ExposeProfiUltimateFinal() {
                 </button>
               </div>
             ))}
+          </div>
+
+          {/* Garantie */}
+          <div className="mt-10 bg-green-50 border border-green-200 rounded-2xl p-6 flex items-center space-x-4 max-w-xl mx-auto">
+            <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <Award className="w-7 h-7 text-green-600" />
+            </div>
+            <div>
+              <h4 className="font-bold text-green-800">14 Tage Geld-zurück-Garantie</h4>
+              <p className="text-green-700 text-sm mt-1">Nicht zufrieden? Kein Problem – wir erstatten den vollen Betrag, ohne Rückfragen.</p>
+            </div>
           </div>
         </div>
       </section>
