@@ -1119,44 +1119,6 @@ const handleExportPDF = () => {
     }
   };
 
- // STRIPE: Checkout Handler
-const handleStripeCheckout = async () => {
-  if (!STRIPE_ENABLED) {
-    handlePaymentSuccess();
-    return;
-  }
-
-
-    localStorage.setItem('expose-profi-payment-pending', JSON.stringify(paymentData));
-    console.log('[PAYMENT] ✅ Daten gespeichert vor Stripe-Redirect');
-
-    const response = await fetch('/api/create-checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: propertyData.maklerEmail || undefined
-      })
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
-      throw new Error(data.message || 'Checkout konnte nicht erstellt werden');
-    }
-
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
-      throw new Error('Keine Checkout-URL erhalten');
-    }
-
-  } catch (error) {
-    console.error('Stripe Checkout Error:', error);
-    showToast(error.message || 'Fehler beim Öffnen der Zahlungsseite', 'error');
-    setIsProcessingPayment(false);
-    localStorage.removeItem('expose-profi-payment-pending');
-  }
-};
 
   // STRIPE: Checkout Handler
 const handleStripeCheckout = async () => {
