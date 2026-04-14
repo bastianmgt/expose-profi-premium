@@ -346,28 +346,6 @@ useEffect(() => {
 ---
 
 ## ✅ **SO VERWENDEN SIE DEN CODE:**
-
-### **SCHRITT 1: GitHub öffnen**
-```
-https://github.com/bastianmarget/expose-profi-premium
-```
-
-### **SCHRITT 2: Änderung 1**
-```
-1. STRG + F
-2. Suchen: const handleStripeCheckout
-3. KOMPLETTE Funktion markieren & löschen
-4. Code von oben (Änderung 1) kopieren
-5. STRG + V einfügen
-```
-
-### **SCHRITT 3: Änderung 2**
-```
-1. STRG + F
-2. Suchen: params.get('success')
-3. KOMPLETTEN useEffect markieren & löschen
-4. Code von oben (Änderung 2) kopieren
-5. STRG + V einfügen
 ```
 
 ### **SCHRITT 4: Speichern**
