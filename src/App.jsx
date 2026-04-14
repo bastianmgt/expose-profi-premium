@@ -350,7 +350,6 @@ useEffect(() => {
 ### **SCHRITT 1: GitHub öffnen**
 ```
 https://github.com/bastianmarget/expose-profi-premium
-→ src → App.jsx → ✏️ Edit
 ```
 
 ### **SCHRITT 2: Änderung 1**
