@@ -343,26 +343,6 @@ useEffect(() => {
 }, []);
 ```
 
----
-
-## ✅ **SO VERWENDEN SIE DEN CODE:**
-```
-
-### **SCHRITT 4: Speichern**
-```
-1. Runterscrollen
-2. Commit message: fix: payment flow localStorage restore
-3. Commit changes klicken
-```
-
-### **SCHRITT 5: Warten**
-```
-90 Sekunden warten!
-```
-
-### **SCHRITT 6: Testen**
-```
-Incognito + F12 Console → expose-profi.de
 
   const scrollToStudio = () => studioRef.current?.scrollIntoView({ behavior: 'smooth' });
 
